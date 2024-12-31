@@ -4,7 +4,7 @@
 #include "ll/api/form/SimpleForm.h"
 #include "magic_enum.hpp"
 #include "mc/world/actor/player/Player.h"
-#include "mc/world/item/registry/ItemStack.h"
+#include "mc/world/item/ItemStack.h"
 #include "mc/world/level/block/Block.h"
 #include "utils/JsonHelper.h"
 #include "utils/Text.h"
@@ -43,40 +43,41 @@ inline void sendBlockManager(Player& player);
 
 
 // 实现
-inline void _addBlock(Player& player, string typeName, config::BlockItem block) {
-    CustomForm f{PLUGIN_TITLE};
+inline void _addBlockImpl(Player& player, string typeName, config::BlockItem block) {
+    try {
+        CustomForm f{PLUGIN_TITLE};
 
-    f.appendInput("typeName", "命名空间", "string", typeName);
-    f.appendInput("name", "名称", "string", block.name);
-    f.appendInput("cost", "消耗经济", "int", std::to_string(block.cost));
-    f.appendInput("limit", "最大连锁数量", "int", std::to_string(block.limit));
+        f.appendInput("typeName", "命名空间", "string", typeName);
+        f.appendInput("name", "名称", "string", block.name);
+        f.appendInput("cost", "消耗经济", "int", std::to_string(block.cost));
+        f.appendInput("limit", "最大连锁数量", "int", std::to_string(block.limit));
 
-    f.appendDropdown("destroyType", "破坏模式", blockDestroyType);
-    f.appendDropdown("silkTouchType", "精准采集模式", blockSilkTouchType);
+        f.appendDropdown("destroyType", "破坏模式", blockDestroyType);
+        f.appendDropdown("silkTouchType", "精准采集模式", blockSilkTouchType);
 
-    f.sendTo(player, [](Player& pl, CustomFormResult const& res, FormCancelReason) {
-        if (!res) return;
-        try {
-            string typeName = std::get<string>(res->at("typeName"));
-            string name     = std::get<string>(res->at("name"));
-            int    cost     = std::stoi(std::get<string>(res->at("cost")));
-            int    limit    = std::stoi(std::get<string>(res->at("limit")));
+        f.sendTo(player, [](Player& pl, CustomFormResult const& res, FormCancelReason) {
+            if (!res) return;
+            try {
+                string typeName = std::get<string>(res->at("typeName"));
+                string name     = std::get<string>(res->at("name"));
+                int    cost     = std::stoi(std::get<string>(res->at("cost")));
+                int    limit    = std::stoi(std::get<string>(res->at("limit")));
 
-            config::DestroyMod dmod =
-                magic_enum::enum_cast<config::DestroyMod>(std::get<string>(res->at("destroyType")))
-                    .value_or(config::DestroyMod::Default);
-            config::SilkTouschMod smod =
-                magic_enum::enum_cast<config::SilkTouschMod>(std::get<string>(res->at("silkTouchType")))
-                    .value_or(config::SilkTouschMod::Unlimited);
+                config::DestroyMod dmod =
+                    magic_enum::enum_cast<config::DestroyMod>(std::get<string>(res->at("destroyType")))
+                        .value_or(config::DestroyMod::Default);
+                config::SilkTouschMod smod =
+                    magic_enum::enum_cast<config::SilkTouschMod>(std::get<string>(res->at("silkTouchType")))
+                        .value_or(config::SilkTouschMod::Unlimited);
 
-            ConfImpl::cfg.blocks[typeName] = config::BlockItem{name, cost, limit, dmod, smod};
+                ConfImpl::cfg.blocks[typeName] = config::BlockItem{name, cost, limit, dmod, smod};
 
-            ConfImpl::save();
-            updateStaticCache(true);
-            sendBlockManager(pl);
-        } catch (std::exception& e) {
-        } catch (...) {}
-    });
+                ConfImpl::save();
+                updateStaticCache(true);
+                sendBlockManager(pl);
+            } catch (...) {}
+        });
+    } catch (...) {}
 }
 inline void _addBlock(Player& player) {
     auto const& item  = player.getSelectedItem();
@@ -85,7 +86,7 @@ inline void _addBlock(Player& player) {
         utils::sendText(player, "获取方块失败!");
         return;
     }
-    _addBlock(player, block->getTypeName(), config::BlockItem{item.getName()});
+    _addBlockImpl(player, block->getTypeName(), config::BlockItem{item.getName()});
 }
 
 inline void _editBlockType(Player& player, string typeName, string content) {
@@ -95,7 +96,7 @@ inline void _editBlockType(Player& player, string typeName, string content) {
     f.setContent(content);
 
     f.appendButton("编辑", "textures/ui/book_edit_hover", "path", [typeName, block](Player& pl) {
-        _addBlock(pl, typeName, block);
+        _addBlockImpl(pl, typeName, block);
     });
     f.appendButton("删除", "textures/ui/icon_trash", "path", [typeName](Player& pl) {
         ConfImpl::cfg.blocks.erase(typeName);

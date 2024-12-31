@@ -5,20 +5,22 @@
 #include "command/Command.h"
 #include "config/Config.h"
 #include "core/Core.h"
+#include "ll/api/io/Logger.h"
 #include "ll/api/mod/RegisterHelper.h"
 
 
 namespace fm {
 
-static std::unique_ptr<Mod> instance;
-
-Mod& Mod::getInstance() { return *instance; }
+Mod& Mod::getInstance() {
+    static Mod instance;
+    return instance;
+}
 
 bool Mod::load() {
     getSelf().getLogger().info("Loading...");
 
 #ifdef DEBUG
-    getSelf().getLogger().consoleLevel = 5;
+    getSelf().getLogger().setLevel(ll::io::LogLevel::Debug);
 #endif
 
     config::ConfImpl::load();
@@ -46,4 +48,4 @@ bool Mod::disable() {
 
 } // namespace fm
 
-LL_REGISTER_MOD(fm::Mod, fm::instance);
+LL_REGISTER_MOD(fm::Mod, fm::Mod::getInstance());

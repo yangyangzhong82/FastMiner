@@ -4,11 +4,15 @@
 #include "ll/api/form/FormBase.h"
 #include "ll/api/form/SimpleForm.h"
 #include "magic_enum.hpp"
+#include "mc/nbt/ByteTag.h"
+#include "mc/world/item/SaveContext.h"
+#include "mc/world/item/SaveContextFactory.h"
 #include "mc/world/level/block/Block.h"
+
 
 #include "mc/nbt/CompoundTag.h"
 #include "mc/world/item/Item.h"
-#include "mc/world/item/registry/ItemStack.h"
+#include "mc/world/item/ItemStack.h"
 
 
 using ConfImpl = fm::config::ConfImpl;
@@ -70,14 +74,19 @@ void registerCommand() {
             return utils::sendText<utils::Level::Error>(out, "请先选择一个物品");
         }
 
-        auto nbt = item.save();
-        auto tag = nbt->getCompound("tag");
-        if (!tag) {
-            nbt->putCompound("tag", CompoundTag{});
+        auto nbt = item.save(*SaveContextFactory::createCloneSaveContext());
+
+        CompoundTagVariant* tag;
+        if (nbt->contains("tag")) {
+            tag = &(*nbt)["tag"];
+        } else {
+            CompoundTagVariant t{};
+            tag = &t;
         }
-        nbt->getCompound("tag")->putByte("Unbreakable", (byte) true);
+        (*tag)["Unbreakable"] = ByteTag{true};
 
         item.load(*nbt);
+        item.setCustomLore({"Unbreakable"});
         pl.refreshInventory();
 
         utils::sendText(pl, "设置已保存");

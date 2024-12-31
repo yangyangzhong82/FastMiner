@@ -1,9 +1,22 @@
 #include "Core.h"
+#include "mc/nbt/ByteTag.h"
 #include "mc/world/item/Item.h"
 
+#include "ll/api/coro/Collect.h"
+#include "ll/api/coro/CoroTask.h"
+#include "ll/api/coro/CoroTaskWaiter.h"
+#include "ll/api/coro/Executor.h"
+#include "ll/api/coro/ForwardAwaiter.h"
+#include "ll/api/coro/Generator.h"
+#include "ll/api/coro/YieldAwaiter.h"
+#include "ll/api/thread/ServerThreadExecutor.h"
 #include "mc/nbt/CompoundTag.h"
-#include "mc/world/item/registry/ItemStack.h"
+#include "mc/world/item/ItemStack.h"
+#include "mc/world/item/ItemStackBase.h"
+#include "mc/world/item/SaveContext.h"
+#include "mc/world/item/SaveContextFactory.h"
 #include <algorithm>
+
 
 #define logger fm::Mod::getInstance().getSelf().getLogger()
 
@@ -26,15 +39,19 @@ struct TaskInfo {
 };
 
 
-ll::event::ListenerPtr          _mPlayerDestroyBlock;
-ll::schedule::GameTickScheduler _mScheduler;
+ll::event::ListenerPtr _mPlayerDestroyBlock;
 
 std::unordered_map<int, TaskInfo> mTaskList;    // 任务列表
 std::unordered_set<size_t>        mRuningBlock; // 正在执行任务的方块
 
 void nextTick(std::function<void()> func) {
     using ll::chrono_literals::operator""_tick;
-    _mScheduler.add<ll::schedule::DelayTask>(1_tick, func);
+    ll::coro::keepThis([func{std::move(func)}]() -> ll::coro::CoroTask<> {
+        co_await 1_tick;
+        logger.debug("111");
+        func();
+        co_return;
+    }).launch(ll::thread::ServerThreadExecutor::getDefault());
 }
 
 size_t core::hash(const BlockPos& v3, const int& dim) {
@@ -52,11 +69,12 @@ int core::randomInt() {
 }
 
 
-// inline
-bool hasUnbreakable(ItemStack* item) {
-    auto nbt = item->save();
-    if (auto tag = nbt->getCompound("tag")) {
-        return (bool)tag->getByte("Unbreakable");
+inline bool hasUnbreakable(ItemStack* item) {
+    auto nbt = item->save(*SaveContextFactory::createCloneSaveContext());
+    if (!nbt->contains("tag")) return false;
+    auto& tag = (*nbt)["tag"];
+    if (tag.contains("Unbreakable")) {
+        return tag["Unbreakable"].get<ByteTag>();
     }
     return false;
 }
@@ -109,9 +127,9 @@ void core::registerEvent() {
                     string const& toolType  = tool->getTypeName();                                // 工具命名空间
 
                     // clang-format off
-                    bool const hasSilkTouch = EnchantUtils::hasEnchant(Enchant::Type::MiningSilkTouch, *tool);
+                    bool const hasSilkTouch = EnchantUtils::hasEnchant(Enchant::Type::SilkTouch, *tool);
 
-                    bool const canDestroyWithAPI = block->getMaterial().isAlwaysDestroyable() || tool->canDestroy(block) || tool->canDestroySpecial(*block);
+                    bool const canDestroyWithAPI = /* block->getMaterial().isAlwaysDestroyable() || */ tool->canDestroy(block) || tool->canDestroySpecial(*block);
                     bool const canDestroyWithConfig   = 
                         (confBlock.tools.empty() || some(confBlock.tools, toolType)) && // 未指定工具、指定工具
                         (
@@ -155,7 +173,7 @@ void core::registerEvent() {
                                 maxLimit,
                                 0,
                                 0,
-                                EnchantUtils::getEnchantLevel(::Enchant::Type::MiningDurability, *tool), // 耐久
+                                EnchantUtils::getEnchantLevel(::Enchant::Type::Unbreaking, *tool), // 耐久
                                 tool,
                                 player
                             }

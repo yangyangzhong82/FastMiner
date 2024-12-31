@@ -1,6 +1,6 @@
 #pragma once
 #include "Utils.h"
-#include "mc/deps/core/mce/UUID.h"
+#include "mc/platform/UUID.h"
 #include "mc/world/actor/player/Player.h"
 
 using string = std::string;
@@ -94,4 +94,4 @@ public:
     void sendMoneySpendTip(Player& player, long long money); // 发送经济不足提示
 };
 
-} // namespace plo::utils
+} // namespace fm::utils

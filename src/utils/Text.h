@@ -1,6 +1,6 @@
 #pragma once
 #include "Utils.h"
-#include "ll/api/Logger.h"
+#include "ll/api/io/Logger.h"
 #include "ll/api/service/Bedrock.h"
 #include "mc/world/actor/player/Player.h"
 #include "mc/world/level/Level.h"
@@ -65,7 +65,7 @@ inline void sendText(const string& realName, const string& fmt, Args&&... args) 
     }
 }
 template <Level type = Level::Normal, typename... Args>
-inline void sendText(ll::Logger& logger, const string& fmt, Args&&... args) {
+inline void sendText(ll::io::Logger& logger, const string& fmt, Args&&... args) {
     if constexpr (type == Level::Error) {
         logger.error(format(PLUGIN_TITLE + Color[type] + fmt, args...));
     } else if constexpr (type == Level::Fatal) {
