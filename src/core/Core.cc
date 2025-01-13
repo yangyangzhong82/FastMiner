@@ -154,12 +154,12 @@ void core::registerEvent() {
                         if (tool->isDamageableItem()) {
                             maxLimit = std::min(maxLimit, (tool->getMaxDamage() - tool->getDamageValue() - 1));
 
-                            if (ConfImpl::cfg.moneys.Enable) {
+                            if (ConfImpl::cfg.moneys.Enable && confBlock.cost != 0) {
                                 maxLimit = std::min(
                                     maxLimit,
                                     static_cast<int>(Moneys::getInstance().getMoney(player) / confBlock.cost)
-                                );
-                            }
+                                 );
+                             }
                         }
                     }
 
