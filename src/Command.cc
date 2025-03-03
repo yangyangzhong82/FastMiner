@@ -117,6 +117,14 @@ void FastMinerCommand::setup() {
         (*tag)["Unbreakable"] = ByteTag{true};
 
         item._loadItem(*nbt);
+        auto mItem = item.mItem;
+        if (mItem) {
+            mItem->fixupCommon(item);
+            if (item.getAuxValue() == 0x7FFF) {
+                item.mAuxValue = 0;
+            }
+        }
+
         item.setCustomLore({"Unbreakable"});
         pl.refreshInventory();
 
