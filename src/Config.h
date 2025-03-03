@@ -49,7 +49,7 @@ using Blocks = std::unordered_map<std::string, BlockItem>;
 
 
 struct Config {
-    int version = 1;
+    int version = 2;
 
     EconomySystemConfig economy; // 经济系统
 
