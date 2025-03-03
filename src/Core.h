@@ -1,4 +1,4 @@
-#include "config/Config.h"
+#include "Config.h"
 #include "ll/api/chrono/GameChrono.h"
 #include "ll/api/coro/CoroTask.h"
 #include "ll/api/event/Event.h"
@@ -19,8 +19,6 @@
 #include "mc/world/level/dimension/Dimension.h"
 #include "mc/world/level/material/Material.h"
 #include "mod/Mod.h"
-#include "utils/Text.h"
-#include "utils/Utils.h"
 #include <functional>
 #include <memory>
 #include <random>

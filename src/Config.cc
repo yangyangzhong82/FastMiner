@@ -8,14 +8,14 @@
 #include <unordered_map>
 
 
-using JSON = nlohmann::json;
 namespace fm::config {
 
+using JSON   = nlohmann::json;
 namespace fs = std::filesystem;
 
 
-Config                                                       ConfImpl::cfg{};
-std::unordered_map<string, std::unordered_map<string, bool>> ConfImpl::playerSetting{};
+Config                                                                 ConfImpl::cfg{};
+std::unordered_map<std::string, std::unordered_map<std::string, bool>> ConfImpl::playerSetting{};
 
 void ConfImpl::load() {
     auto path = Mod::getInstance().getSelf().getModDir() / "Config.json";
@@ -50,7 +50,7 @@ void ConfImpl::loadPlayerSetting() {
 
         for (auto& [uuid, obj] : j.items()) {
             if (playerSetting.find(uuid) == playerSetting.end()) {
-                playerSetting[uuid] = std::unordered_map<string, bool>{}; // init
+                playerSetting[uuid] = std::unordered_map<std::string, bool>{}; // init
             }
             for (auto& [type, bol] : obj.items()) {
                 playerSetting[uuid][type] = bol;
@@ -88,7 +88,7 @@ void ConfImpl::savePlayerSettingOnNewThread() {
 }
 
 
-bool ConfImpl::isEnable(const string& uuid, const string& typeName) {
+bool ConfImpl::isEnable(const std::string& uuid, const std::string& typeName) {
     auto fn = playerSetting.find(uuid);
     if (fn != playerSetting.end()) {
         auto dt = fn->second.find(typeName);
@@ -98,30 +98,30 @@ bool ConfImpl::isEnable(const string& uuid, const string& typeName) {
     }
     return false;
 }
-bool ConfImpl::disable(const string& uuid, const string& typeName) {
+bool ConfImpl::disable(const std::string& uuid, const std::string& typeName) {
     auto fn = playerSetting.find(uuid);
     if (fn == playerSetting.end()) {
-        playerSetting[string(uuid)] = std::unordered_map<string, bool>{};
+        playerSetting[std::string(uuid)] = std::unordered_map<std::string, bool>{};
     }
-    playerSetting[uuid][string(typeName)] = false;
+    playerSetting[uuid][std::string(typeName)] = false;
     savePlayerSettingOnNewThread();
     return true;
 }
-bool ConfImpl::enable(const string& uuid, const string& typeName) {
+bool ConfImpl::enable(const std::string& uuid, const std::string& typeName) {
     auto fn = playerSetting.find(uuid);
     if (fn == playerSetting.end()) {
-        playerSetting[string(uuid)] = std::unordered_map<string, bool>{};
+        playerSetting[std::string(uuid)] = std::unordered_map<std::string, bool>{};
     }
-    playerSetting[uuid][string(typeName)] = true;
+    playerSetting[uuid][std::string(typeName)] = true;
     savePlayerSettingOnNewThread();
     return true;
 }
-bool ConfImpl::setEnable(const string& uuid, const string& typeName, bool isEnable) {
+bool ConfImpl::setEnable(const std::string& uuid, const std::string& typeName, bool isEnable) {
     auto fn = playerSetting.find(uuid);
     if (fn == playerSetting.end()) {
-        playerSetting[string(uuid)] = std::unordered_map<string, bool>{};
+        playerSetting[std::string(uuid)] = std::unordered_map<std::string, bool>{};
     }
-    playerSetting[uuid][string(typeName)] = isEnable;
+    playerSetting[uuid][std::string(typeName)] = isEnable;
     savePlayerSettingOnNewThread();
     return true;
 }

@@ -1,36 +1,67 @@
 #include "Command.h"
+#include "Config.h"
 #include "GUI.h"
+#include "JsonUtils.h"
+#include "McUtils.h"
 #include "ll/api/form/CustomForm.h"
 #include "ll/api/form/FormBase.h"
 #include "ll/api/form/SimpleForm.h"
 #include "magic_enum.hpp"
 #include "mc/nbt/ByteTag.h"
+#include "mc/nbt/CompoundTag.h"
+#include "mc/world/actor/player/Player.h"
+#include "mc/world/item/Item.h"
+#include "mc/world/item/ItemStack.h"
 #include "mc/world/item/SaveContext.h"
 #include "mc/world/item/SaveContextFactory.h"
 #include "mc/world/level/block/Block.h"
-
-
-#include "mc/nbt/CompoundTag.h"
-#include "mc/world/item/Item.h"
-#include "mc/world/item/ItemStack.h"
+#include <cstdint>
+#include <fmt/core.h>
+#include <initializer_list>
+#include <ll/api/command/Command.h>
+#include <ll/api/command/CommandHandle.h>
+#include <ll/api/command/CommandRegistrar.h>
+#include <ll/api/command/Optional.h>
+#include <ll/api/command/Overload.h>
+#include <ll/api/i18n/I18n.h>
+#include <ll/api/io/Logger.h>
+#include <ll/api/service/Bedrock.h>
+#include <ll/api/service/PlayerInfo.h>
+#include <ll/api/service/Service.h>
+#include <ll/api/utils/HashUtils.h>
+#include <mc/network/packet/LevelChunkPacket.h>
+#include <mc/network/packet/TextPacket.h>
+#include <mc/server/ServerLevel.h>
+#include <mc/server/ServerPlayer.h>
+#include <mc/server/commands/CommandOrigin.h>
+#include <mc/server/commands/CommandOriginType.h>
+#include <mc/server/commands/CommandOutput.h>
+#include <mc/server/commands/CommandParameterOption.h>
+#include <mc/server/commands/CommandPermissionLevel.h>
+#include <mc/server/commands/CommandRegistry.h>
+#include <mc/server/commands/CommandSelector.h>
+#include <mc/world/actor/Actor.h>
+#include <mc/world/actor/player/Player.h>
+#include <sstream>
 
 
 using ConfImpl = fm::config::ConfImpl;
 
-namespace fm::command {
+namespace fm {
 
 
 struct StatusOption {
     enum class Status : bool { off = false, on = true } state;
 };
 
-void registerCommand() {
+
+void FastMinerCommand::setup() {
     auto& cmd = ll::command::CommandRegistrar::getInstance().getOrCreateCommand("fm", "FastMiner - 连锁采集");
 
     // fm
     cmd.overload().execute([](CommandOrigin const& ori, CommandOutput& out) {
         if (ori.getOriginType() != CommandOriginType::Player) {
-            return utils::sendText<utils::Level::Error>(out, "此命令仅限玩家使用");
+            return mc_utils::sendText<mc_utils::LogLevel::Error>(out, "此命令仅限玩家使用");
         }
         Player& pl = *static_cast<Player*>(ori.getEntity());
         gui::sendSettingGUI(pl);
@@ -40,23 +71,23 @@ void registerCommand() {
     cmd.overload<StatusOption>().required("state").execute(
         [](CommandOrigin const& ori, CommandOutput& out, StatusOption const& opt) {
             if (ori.getOriginType() != CommandOriginType::Player) {
-                return utils::sendText<utils::Level::Error>(out, "此命令仅限玩家使用");
+                return mc_utils::sendText<mc_utils::LogLevel::Error>(out, "此命令仅限玩家使用");
             }
             Player& pl = *static_cast<Player*>(ori.getEntity());
 
             ConfImpl::setEnable(pl.getUuid().asString(), "enable", (bool)opt.state);
-            utils::sendText(pl, "设置已保存");
+            mc_utils::sendText(pl, "设置已保存");
         }
     );
 
     // fm manager
     cmd.overload().text("manager").execute([](CommandOrigin const& ori, CommandOutput& out) {
         if (ori.getOriginType() != CommandOriginType::Player) {
-            return utils::sendText<utils::Level::Error>(out, "此命令仅限玩家使用");
+            return mc_utils::sendText<mc_utils::LogLevel::Error>(out, "此命令仅限玩家使用");
         }
         Player& pl = *static_cast<Player*>(ori.getEntity());
         if (!pl.isOperator()) {
-            return utils::sendText<utils::Level::Error>(out, "无权限");
+            return mc_utils::sendText<mc_utils::LogLevel::Error>(out, "无权限");
         }
         gui::sendBlockManager(pl);
     });
@@ -65,13 +96,13 @@ void registerCommand() {
     // fm debug unbreakable
     cmd.overload().text("debug").text("unbreakable").execute([](CommandOrigin const& ori, CommandOutput& out) {
         if (ori.getOriginType() != CommandOriginType::Player) {
-            return utils::sendText<utils::Level::Error>(out, "此命令仅限玩家使用");
+            return mc_utils::sendText<mc_utils::LogLevel::Error>(out, "此命令仅限玩家使用");
         }
         Player& pl = *static_cast<Player*>(ori.getEntity());
 
         auto& item = const_cast<ItemStack&>(pl.getSelectedItem());
         if (item.isNull()) {
-            return utils::sendText<utils::Level::Error>(out, "请先选择一个物品");
+            return mc_utils::sendText<mc_utils::LogLevel::Error>(out, "请先选择一个物品");
         }
 
         auto nbt = item.save(*SaveContextFactory::createCloneSaveContext());
@@ -85,15 +116,14 @@ void registerCommand() {
         }
         (*tag)["Unbreakable"] = ByteTag{true};
 
-        item.load(*nbt);
+        item._loadItem(*nbt);
         item.setCustomLore({"Unbreakable"});
         pl.refreshInventory();
 
-        utils::sendText(pl, "设置已保存");
+        mc_utils::sendText(pl, "设置已保存");
     });
-
 #endif
 }
 
 
-} // namespace fm::command
+} // namespace fm

@@ -1,12 +1,10 @@
 #include "mod/Mod.h"
-
-#include <memory>
-
-#include "command/Command.h"
-#include "config/Config.h"
-#include "core/Core.h"
+#include "Command.h"
+#include "Config.h"
+#include "Core.h"
 #include "ll/api/io/Logger.h"
 #include "ll/api/mod/RegisterHelper.h"
+#include <memory>
 
 
 namespace fm {
@@ -26,15 +24,13 @@ bool Mod::load() {
     config::ConfImpl::load();
     config::ConfImpl::loadPlayerSetting();
 
-    utils::Moneys::getInstance().updateConfig(config::ConfImpl::cfg.moneys);
-
     return true;
 }
 
 bool Mod::enable() {
     getSelf().getLogger().info("Enabling...");
 
-    command::registerCommand();
+    FastMinerCommand::setup();
     core::registerEvent();
 
     return true;

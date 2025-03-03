@@ -1,15 +1,13 @@
 #pragma once
-#include "ll/api/Config.h"
-#include "utils/Moneys.h"
+#include "EconomySystem.h"
 #include <sys/stat.h>
 #include <unordered_map>
 #include <vector>
 
 
-using string = std::string;
+namespace fm {
 
-namespace fm::config {
-
+namespace config {
 
 enum class SilkTouschMod : int {
     Unlimited = 0, // 无限制
@@ -22,13 +20,13 @@ enum class DestroyMod : int {
     Cube    = 1  // 3x3x3=27
 };
 
-using Tools        = std::vector<string>; // 工具
-using SimilarBlock = std::vector<string>; // 类似方块
+using Tools        = std::vector<std::string>; // 工具
+using SimilarBlock = std::vector<std::string>; // 类似方块
 
 struct BlockItem {
-    string name;       // 名称
-    int    cost{0};    // 经济
-    int    limit{256}; // 上限
+    std::string name;       // 名称
+    int         cost{0};    // 经济
+    int         limit{256}; // 上限
 
     DestroyMod    destroyMod{DestroyMod::Default};         // 破坏方式
     SilkTouschMod silkTouschMod{SilkTouschMod::Unlimited}; // 精准采集
@@ -38,20 +36,22 @@ struct BlockItem {
 };
 
 
-using Blocks = std::unordered_map<string, BlockItem>;
+using Blocks = std::unordered_map<std::string, BlockItem>;
 
 
 #define DefaultWoodBlockTools                                                                                          \
-    {                                                                                                                  \
-        "minecraft:wooden_axe", "minecraft:stone_axe", "minecraft:iron_axe", "minecraft:diamond_axe",                  \
-            "minecraft:golden_axe", "minecraft:netherite_axe"                                                          \
-    }
+    {"minecraft:wooden_axe",                                                                                           \
+     "minecraft:stone_axe",                                                                                            \
+     "minecraft:iron_axe",                                                                                             \
+     "minecraft:diamond_axe",                                                                                          \
+     "minecraft:golden_axe",                                                                                           \
+     "minecraft:netherite_axe"}
 
 
 struct Config {
     int version = 1;
 
-    utils::MoneysConfig moneys; // 经济
+    EconomySystemConfig economy; // 经济系统
 
     // clang-format off
     Blocks blocks  = {
@@ -336,8 +336,8 @@ public:
     ConfImpl& operator=(ConfImpl const&) = delete;
 
 
-    static Config                                                       cfg;
-    static std::unordered_map<string, std::unordered_map<string, bool>> playerSetting;
+    static Config                                                                 cfg;
+    static std::unordered_map<std::string, std::unordered_map<std::string, bool>> playerSetting;
 
     static void load();
     static void save();
@@ -347,11 +347,14 @@ public:
     static void savePlayerSettingOnNewThread();
 
     // 玩家自定义配置
-    static bool disable(string const& uuid, string const& typeName);
-    static bool enable(string const& uuid, string const& typeName);
-    static bool isEnable(string const& uuid, string const& typeName);
-    static bool setEnable(string const& uuid, string const& typeName, bool isEnable);
+    static bool disable(std::string const& uuid, std::string const& typeName);
+    static bool enable(std::string const& uuid, std::string const& typeName);
+    static bool isEnable(std::string const& uuid, std::string const& typeName);
+    static bool setEnable(std::string const& uuid, std::string const& typeName, bool isEnable);
 };
 
+} // namespace config
 
-} // namespace fm::config
+using Config = config::ConfImpl;
+
+} // namespace fm

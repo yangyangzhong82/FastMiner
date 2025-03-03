@@ -1,16 +1,16 @@
 #include "Core.h"
-#include "mc/nbt/ByteTag.h"
-#include "mc/world/item/Item.h"
-
+#include "EconomySystem.h"
+#include "McUtils.h"
 #include "ll/api/coro/Collect.h"
 #include "ll/api/coro/CoroTask.h"
-#include "ll/api/coro/CoroTaskWaiter.h"
 #include "ll/api/coro/Executor.h"
 #include "ll/api/coro/ForwardAwaiter.h"
 #include "ll/api/coro/Generator.h"
 #include "ll/api/coro/YieldAwaiter.h"
 #include "ll/api/thread/ServerThreadExecutor.h"
+#include "mc/nbt/ByteTag.h"
 #include "mc/nbt/CompoundTag.h"
+#include "mc/world/item/Item.h"
 #include "mc/world/item/ItemStack.h"
 #include "mc/world/item/ItemStackBase.h"
 #include "mc/world/item/SaveContext.h"
@@ -24,18 +24,23 @@
 namespace core = fm::core;
 using namespace core;
 using namespace fm::config;
-using namespace fm::utils;
+
+template <typename T>
+[[nodiscard]] inline bool some(std::vector<T> const& vec, T const& it) {
+    if (vec.empty()) return false;
+    return std::find(vec.begin(), vec.end(), it) != vec.end();
+}
 
 
 struct TaskInfo {
-    string     mBlockTypeName;   // 方块命名空间
-    int        mDimension;       // 维度
-    int        mLimit;           // 最大数量
-    int        mCount;           // 当前数量
-    int        mDeductDamage;    // 扣除耐久
-    int        mDurabilityLevel; // 耐久等级
-    ItemStack* mTool;            // 工具
-    Player*    mPlayer;          // 玩家
+    std::string mBlockTypeName;   // 方块命名空间
+    int         mDimension;       // 维度
+    int         mLimit;           // 最大数量
+    int         mCount;           // 当前数量
+    int         mDeductDamage;    // 扣除耐久
+    int         mDurabilityLevel; // 耐久等级
+    ItemStack*  mTool;            // 工具
+    Player*     mPlayer;          // 玩家
 };
 
 
@@ -94,14 +99,15 @@ void core::registerEvent() {
                 logger.warn("DestroyBlock");
 #endif
 
-                Player*       player   = &ev.self();
-                const Block*  block    = &player->getDimensionBlockSource().getBlock(ev.pos());
-                string const& typeName = block->getTypeName();
+                Player*            player   = &ev.self();
+                const Block*       block    = &player->getDimensionBlockSource().getBlock(ev.pos());
+                std::string const& typeName = block->getTypeName();
 
                 if (player->getPlayerGameType() != GameType::Survival ||           // 非生存模式
                     !ConfImpl::isEnable(player->getUuid().asString(), "enable") || // 未启用
                     !ConfImpl::isEnable(player->getUuid().asString(), typeName) || // 方块未启用
-                    (ConfImpl::isEnable(player->getUuid().asString(), "sneak") && !player->isSneaking()) // 未潜行
+                    (ConfImpl::isEnable(player->getUuid().asString(), "sneak") && !mc_utils::PlayerIsSneaking(*player)
+                    ) // 未潜行
                 ) {
                     return;
                 }
@@ -122,14 +128,14 @@ void core::registerEvent() {
 #endif
 
                     if (iter == ConfImpl::cfg.blocks.end()) return; // 方块未配置
-                    auto const&   confBlock = iter->second;
-                    auto*         tool      = const_cast<ItemStack*>(&player->getSelectedItem()); // 工具
-                    string const& toolType  = tool->getTypeName();                                // 工具命名空间
+                    auto const&        confBlock = iter->second;
+                    auto*              tool      = const_cast<ItemStack*>(&player->getSelectedItem()); // 工具
+                    std::string const& toolType  = tool->getTypeName();                                // 工具命名空间
 
                     // clang-format off
                     bool const hasSilkTouch = EnchantUtils::hasEnchant(Enchant::Type::SilkTouch, *tool);
 
-                    bool const canDestroyWithAPI = /* block->getMaterial().isAlwaysDestroyable() || */ tool->canDestroy(block) || tool->canDestroySpecial(*block);
+                    bool const canDestroyWithAPI =  mc_utils::CanDestroyBlock(*tool,*block) || mc_utils::CanDestroySpecial(*tool,*block);
                     bool const canDestroyWithConfig   = 
                         (confBlock.tools.empty() || some(confBlock.tools, toolType)) && // 未指定工具、指定工具
                         (
@@ -154,12 +160,12 @@ void core::registerEvent() {
                         if (tool->isDamageableItem()) {
                             maxLimit = std::min(maxLimit, (tool->getMaxDamage() - tool->getDamageValue() - 1));
 
-                            if (ConfImpl::cfg.moneys.Enable && confBlock.cost != 0) {
+                            if (ConfImpl::cfg.economy.enabled && confBlock.cost != 0) {
                                 maxLimit = std::min(
                                     maxLimit,
-                                    static_cast<int>(Moneys::getInstance().getMoney(player) / confBlock.cost)
-                                 );
-                             }
+                                    static_cast<int>(EconomySystem::getInstance().get(*player) / confBlock.cost)
+                                );
+                            }
                         }
                     }
 
@@ -278,8 +284,8 @@ void core::miner(const int& taskID, const BlockPos stratPos) {
                 size_t   hashed = hash(nextPos, task.mDimension);
 
                 if (mVisited.insert(hashed).second) { // 如果插入成功（即之前未访问过）
-                    const Block*  nextBlock    = &bs.getBlock(nextPos);
-                    string const& nextTypeName = nextBlock->getTypeName();
+                    const Block*       nextBlock    = &bs.getBlock(nextPos);
+                    std::string const& nextTypeName = nextBlock->getTypeName();
 
                     if (task.mBlockTypeName == nextTypeName || some(confBlock.similarBlock, nextTypeName)) {
                         mQueue.emplace_back(nextBlock, nextPos);
@@ -303,16 +309,17 @@ void core::miner(const int& taskID, const BlockPos stratPos) {
                 }
 
                 auto cost = confBlock.cost * (task.mCount - 1);
-                Moneys::getInstance().reduceMoney(pl, cost);
+                EconomySystem::getInstance().reduce(*pl, cost);
 
                 pl->refreshInventory();
 
-                sendText(
+                mc_utils::sendText(
                     pl,
                     "连锁 {} 个方块, 消耗 {} 点耐久{}, 耗时 {}ms",
                     std::to_string(task.mCount),
                     std::to_string(task.mDeductDamage),
-                    ConfImpl::cfg.moneys.Enable ? ", " + ConfImpl::cfg.moneys.MoneyName + std::to_string(cost) : "",
+                    ConfImpl::cfg.economy.enabled ? ", " + ConfImpl::cfg.economy.economyName + std::to_string(cost)
+                                                  : "",
                     duration.count()
                 );
             }

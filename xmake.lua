@@ -6,7 +6,7 @@ add_repositories("liteldev-repo https://github.com/LiteLDev/xmake-repo.git")
 -- add_requires("levilamina develop") to use develop version
 -- please note that you should add bdslibrary yourself if using dev version
 if is_config("target_type", "server") then
-    add_requires("levilamina 1.0.0-rc.3", {configs = {target_type = "server"}})
+    add_requires("levilamina 1.1.0", {configs = {target_type = "server"}})
 else
     add_requires("levilamina 1.0.0-rc.3", {configs = {target_type = "client"}})
 end
@@ -39,7 +39,7 @@ target("FastMiner") -- Change this to your mod name.
         "/w44738",
         "/w45204"
     )
-    add_defines("NOMINMAX", "UNICODE", "PLUGIN_TITLE=\"FastMiner\"")
+    add_defines("NOMINMAX", "UNICODE", "PLUGIN_NAME=\"FastMiner\"")
     add_files("src/**.cc")
     add_includedirs("src")
     add_packages("levilamina", "legacymoney")

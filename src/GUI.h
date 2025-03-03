@@ -1,4 +1,6 @@
-#include "config/Config.h"
+#include "Config.h"
+#include "JsonUtils.h"
+#include "McUtils.h"
 #include "ll/api/form/CustomForm.h"
 #include "ll/api/form/FormBase.h"
 #include "ll/api/form/SimpleForm.h"
@@ -6,35 +8,31 @@
 #include "mc/world/actor/player/Player.h"
 #include "mc/world/item/ItemStack.h"
 #include "mc/world/level/block/Block.h"
-#include "utils/JsonHelper.h"
-#include "utils/Text.h"
 #include <mc/world/actor/Actor.h>
 #include <mc/world/actor/player/Player.h>
 
 
 using JSON = nlohmann::json;
 using namespace ll::form;
-using ConfImpl = fm::config::ConfImpl;
-
 
 namespace fm::gui {
 
 inline static JSON   blockJson;
 inline static size_t blockSize;
 
-inline static const std::vector<string> blockDestroyType = {
-    string(magic_enum::enum_name(config::DestroyMod::Default)),
-    string(magic_enum::enum_name(config::DestroyMod::Cube))
+inline static const std::vector<std::string> blockDestroyType = {
+    std::string(magic_enum::enum_name(config::DestroyMod::Default)),
+    std::string(magic_enum::enum_name(config::DestroyMod::Cube))
 };
-inline static const std::vector<string> blockSilkTouchType = {
-    string(magic_enum::enum_name(config::SilkTouschMod::Unlimited)),
-    string(magic_enum::enum_name(config::SilkTouschMod::Forbid)),
-    string(magic_enum::enum_name(config::SilkTouschMod::Need))
+inline static const std::vector<std::string> blockSilkTouchType = {
+    std::string(magic_enum::enum_name(config::SilkTouschMod::Unlimited)),
+    std::string(magic_enum::enum_name(config::SilkTouschMod::Forbid)),
+    std::string(magic_enum::enum_name(config::SilkTouschMod::Need))
 };
 inline void updateStaticCache(bool force = false) {
-    if (blockJson.empty() || ConfImpl::cfg.blocks.size() != blockSize || force) {
-        blockJson = utils::JsonHelper::structToJson(ConfImpl::cfg.blocks);
-        blockSize = ConfImpl::cfg.blocks.size();
+    if (blockJson.empty() || Config::cfg.blocks.size() != blockSize || force) {
+        blockJson = json_utils::structToJson(Config::cfg.blocks);
+        blockSize = Config::cfg.blocks.size();
     }
 }
 
@@ -43,9 +41,9 @@ inline void sendBlockManager(Player& player);
 
 
 // 实现
-inline void _addBlockImpl(Player& player, string typeName, config::BlockItem block) {
+inline void _addBlockImpl(Player& player, std::string typeName, config::BlockItem block) {
     try {
-        CustomForm f{PLUGIN_TITLE};
+        CustomForm f{PLUGIN_NAME};
 
         f.appendInput("typeName", "命名空间", "string", typeName);
         f.appendInput("name", "名称", "string", block.name);
@@ -58,21 +56,21 @@ inline void _addBlockImpl(Player& player, string typeName, config::BlockItem blo
         f.sendTo(player, [](Player& pl, CustomFormResult const& res, FormCancelReason) {
             if (!res) return;
             try {
-                string typeName = std::get<string>(res->at("typeName"));
-                string name     = std::get<string>(res->at("name"));
-                int    cost     = std::stoi(std::get<string>(res->at("cost")));
-                int    limit    = std::stoi(std::get<string>(res->at("limit")));
+                std::string typeName = std::get<std::string>(res->at("typeName"));
+                std::string name     = std::get<std::string>(res->at("name"));
+                int         cost     = std::stoi(std::get<std::string>(res->at("cost")));
+                int         limit    = std::stoi(std::get<std::string>(res->at("limit")));
 
                 config::DestroyMod dmod =
-                    magic_enum::enum_cast<config::DestroyMod>(std::get<string>(res->at("destroyType")))
+                    magic_enum::enum_cast<config::DestroyMod>(std::get<std::string>(res->at("destroyType")))
                         .value_or(config::DestroyMod::Default);
                 config::SilkTouschMod smod =
-                    magic_enum::enum_cast<config::SilkTouschMod>(std::get<string>(res->at("silkTouchType")))
+                    magic_enum::enum_cast<config::SilkTouschMod>(std::get<std::string>(res->at("silkTouchType")))
                         .value_or(config::SilkTouschMod::Unlimited);
 
-                ConfImpl::cfg.blocks[typeName] = config::BlockItem{name, cost, limit, dmod, smod};
+                Config::cfg.blocks[typeName] = config::BlockItem{name, cost, limit, dmod, smod};
 
-                ConfImpl::save();
+                Config::save();
                 updateStaticCache(true);
                 sendBlockManager(pl);
             } catch (...) {}
@@ -81,26 +79,26 @@ inline void _addBlockImpl(Player& player, string typeName, config::BlockItem blo
 }
 inline void _addBlock(Player& player) {
     auto const& item  = player.getSelectedItem();
-    auto        block = item.getBlock();
+    auto        block = item.mBlock;
     if (!block) {
-        utils::sendText(player, "获取方块失败!");
+        mc_utils::sendText(player, "获取方块失败!");
         return;
     }
     _addBlockImpl(player, block->getTypeName(), config::BlockItem{item.getName()});
 }
 
-inline void _editBlockType(Player& player, string typeName, string content) {
-    auto& block = ConfImpl::cfg.blocks[typeName];
+inline void _editBlockType(Player& player, std::string typeName, std::string content) {
+    auto& block = Config::cfg.blocks[typeName];
 
-    SimpleForm f{PLUGIN_TITLE};
+    SimpleForm f{PLUGIN_NAME};
     f.setContent(content);
 
     f.appendButton("编辑", "textures/ui/book_edit_hover", "path", [typeName, block](Player& pl) {
         _addBlockImpl(pl, typeName, block);
     });
     f.appendButton("删除", "textures/ui/icon_trash", "path", [typeName](Player& pl) {
-        ConfImpl::cfg.blocks.erase(typeName);
-        ConfImpl::save();
+        Config::cfg.blocks.erase(typeName);
+        Config::save();
         updateStaticCache(true);
         sendBlockManager(pl);
     });
@@ -111,7 +109,7 @@ inline void _editBlockType(Player& player, string typeName, string content) {
 inline void sendBlockManager(Player& player) {
     updateStaticCache();
 
-    SimpleForm f{PLUGIN_TITLE};
+    SimpleForm f{PLUGIN_NAME};
     f.setContent("FastMiner - 管理面板");
 
     f.appendButton("添加手持方块", "textures/ui/color_plus", "path", [](Player& pl) { _addBlock(pl); });
@@ -129,14 +127,14 @@ inline void sendSettingGUI(Player& player) {
 
     auto uuid = player.getUuid().asString();
 
-    CustomForm f{PLUGIN_TITLE};
-    f.appendToggle("enable", "启用连锁采集", ConfImpl::isEnable(uuid, "enable"));
-    f.appendToggle("sneak", "仅潜行时启用", ConfImpl::isEnable(uuid, "sneak"));
+    CustomForm f{PLUGIN_NAME};
+    f.appendToggle("enable", "启用连锁采集", Config::isEnable(uuid, "enable"));
+    f.appendToggle("sneak", "仅潜行时启用", Config::isEnable(uuid, "sneak"));
 
     f.appendLabel("----- 方块配置 -----");
 
     for (auto& [k, v] : blockJson.items()) {
-        f.appendToggle(k, v["name"], ConfImpl::isEnable(uuid, k));
+        f.appendToggle(k, v["name"], Config::isEnable(uuid, k));
     }
 
     f.sendTo(player, [](Player& pl, CustomFormResult const& res, FormCancelReason) {
@@ -147,15 +145,15 @@ inline void sendSettingGUI(Player& player) {
         bool enable = std::get<uint64_t>(res->at("enable"));
         bool sneak  = std::get<uint64_t>(res->at("sneak"));
 
-        ConfImpl::setEnable(uuid, "enable", enable);
-        ConfImpl::setEnable(uuid, "sneak", sneak);
+        Config::setEnable(uuid, "enable", enable);
+        Config::setEnable(uuid, "sneak", sneak);
 
         // Block
         for (auto& [k, v] : blockJson.items()) {
-            ConfImpl::setEnable(uuid, k, std::get<uint64_t>(res->at(k)));
+            Config::setEnable(uuid, k, std::get<uint64_t>(res->at(k)));
         }
 
-        utils::sendText(pl, "设置已保存");
+        mc_utils::sendText(pl, "设置已保存");
     });
 }
 
