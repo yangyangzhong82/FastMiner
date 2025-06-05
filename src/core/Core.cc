@@ -253,21 +253,21 @@ void core::miner(const int& taskID, const BlockPos stratPos) {
         auto   start      = std::chrono::high_resolution_clock::now();
         size_t queueIndex = 0;
         while (task.mCount < task.mLimit && queueIndex < mQueue.size()) {
-            auto& [block, pos] = mQueue[queueIndex++];
+            auto const& [curBlock, curPos] = mQueue[queueIndex++];
 
             // 处理
-            if (!block->isAir()) {
-                auto const curHashed = hash(pos, task.mDimension);
+            if (!curBlock->isAir()) {
+                auto const curHashed = hash(curPos, task.mDimension);
                 mRuningBlock.insert(curHashed);
 
-                auto ev = ll::event::player::PlayerDestroyBlockEvent(*task.mPlayer, pos);
+                auto ev = ll::event::player::PlayerDestroyBlockEvent(*task.mPlayer, curPos);
                 bus.publish(ev);
 
                 mRuningBlock.erase(curHashed);
 
                 if (!ev.isCancelled()) {
-                    block->playerDestroy(*task.mPlayer, pos);
-                    bs.removeBlock(pos);
+                    curBlock->playerDestroy(*task.mPlayer, curPos);
+                    bs.removeBlock(curPos);
                     task.mCount++;
                     if (task.mDurabilityLevel == 0
                         || (task.mDurabilityLevel > 0 && randomInt() < (100 / task.mDurabilityLevel + 1))) {
@@ -277,8 +277,8 @@ void core::miner(const int& taskID, const BlockPos stratPos) {
             }
 
             // BFS 搜索
-            for (auto& [x, y, z] : dirs) {
-                BlockPos nextPos(pos.x + x, pos.y + y, pos.z + z);
+            for (auto const& [x, y, z] : dirs) {
+                BlockPos nextPos(curPos.x + x, curPos.y + y, curPos.z + z);
                 size_t   hashed = hash(nextPos, task.mDimension);
 
                 if (mVisited.insert(hashed).second) { // 如果插入成功（即之前未访问过）
@@ -286,7 +286,7 @@ void core::miner(const int& taskID, const BlockPos stratPos) {
                     std::string const& nextTypeName = nextBlock->getTypeName();
 
                     if (task.mBlockTypeName == nextTypeName || confBlock.similarBlock.contains(nextTypeName)) {
-                        mQueue.emplace_back(nextBlock, nextPos);
+                        mQueue.emplace_back(nextBlock, std::move(nextPos));
                     }
                 }
             }
