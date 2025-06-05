@@ -1,6 +1,8 @@
-#include "Core.h"
+#include "core/Core.h"
 #include "EconomySystem.h"
 #include "McUtils.h"
+#include "config/PlayerConfig.h"
+#include "ll/api/base/StdInt.h"
 #include "ll/api/coro/Collect.h"
 #include "ll/api/coro/CoroTask.h"
 #include "ll/api/coro/Executor.h"
@@ -16,20 +18,15 @@
 #include "mc/world/item/SaveContext.h"
 #include "mc/world/item/SaveContextFactory.h"
 #include <algorithm>
+#include <tuple>
+#include <vector>
 
 
-#define logger fm::Mod::getInstance().getSelf().getLogger()
+#define logger fm::FastMiner::getInstance().getSelf().getLogger()
 
 
 namespace core = fm::core;
 using namespace core;
-using namespace fm::config;
-
-template <typename T>
-[[nodiscard]] inline bool some(std::vector<T> const& vec, T const& it) {
-    if (vec.empty()) return false;
-    return std::find(vec.begin(), vec.end(), it) != vec.end();
-}
 
 
 struct TaskInfo {
@@ -103,11 +100,11 @@ void core::registerEvent() {
                 const Block*       block    = &player->getDimensionBlockSource().getBlock(ev.pos());
                 std::string const& typeName = block->getTypeName();
 
-                if (player->getPlayerGameType() != GameType::Survival ||           // 非生存模式
-                    !ConfImpl::isEnable(player->getUuid().asString(), "enable") || // 未启用
-                    !ConfImpl::isEnable(player->getUuid().asString(), typeName) || // 方块未启用
-                    (ConfImpl::isEnable(player->getUuid().asString(), "sneak") && !mc_utils::PlayerIsSneaking(*player)
-                    ) // 未潜行
+                if (player->getPlayerGameType() != GameType::Survival ||                // 非生存模式
+                    !PlayerConfig::isEnabled(player->getUuid().asString(), "enable") || // 未启用
+                    !PlayerConfig::isEnabled(player->getUuid().asString(), typeName) || // 方块未启用
+                    (PlayerConfig::isEnabled(player->getUuid().asString(), "sneak")
+                     && !mc_utils::PlayerIsSneaking(*player)) // 未潜行
                 ) {
                     return;
                 }
@@ -121,13 +118,13 @@ void core::registerEvent() {
                 nextTick([player, block, blockPos, typeName]() {
                     if (!player->getDimensionBlockSourceConst().getBlock(blockPos).isAir()) return; // 被拦截
 
-                    auto const& iter = ConfImpl::cfg.blocks.find(typeName);
+                    auto const& iter = Config::cfg.blocks.find(typeName);
 
 #ifdef DEBUG
                     logger.warn("Finding block...");
 #endif
 
-                    if (iter == ConfImpl::cfg.blocks.end()) return; // 方块未配置
+                    if (iter == Config::cfg.blocks.end()) return; // 方块未配置
                     auto const&        confBlock = iter->second;
                     auto*              tool      = const_cast<ItemStack*>(&player->getSelectedItem()); // 工具
                     std::string const& toolType  = tool->getTypeName();                                // 工具命名空间
@@ -137,11 +134,11 @@ void core::registerEvent() {
 
                     bool const canDestroyWithAPI =  mc_utils::CanDestroyBlock(*tool,*block) || mc_utils::CanDestroySpecial(*tool,*block);
                     bool const canDestroyWithConfig   = 
-                        (confBlock.tools.empty() || some(confBlock.tools, toolType)) && // 未指定工具、指定工具
+                        (confBlock.tools.empty() || confBlock.tools.contains(toolType)) && // 未指定工具、指定工具
                         (
-                            (confBlock.silkTouschMod == SilkTouschMod::Forbid && !hasSilkTouch) || // 禁止精准
-                            (confBlock.silkTouschMod == SilkTouschMod::Need && hasSilkTouch) || // 需要精准
-                            confBlock.silkTouschMod == SilkTouschMod::Unlimited // 无限制
+                            (confBlock.silkTouchMod == Config::SilkTouchMode::Forbid && !hasSilkTouch) || // 禁止精准
+                            (confBlock.silkTouchMod == Config::SilkTouchMode::Need && hasSilkTouch) || // 需要精准
+                            confBlock.silkTouchMod == Config::SilkTouchMode::Unlimited // 无限制
                         );
             // clang-format on
 
@@ -160,7 +157,7 @@ void core::registerEvent() {
                         if (tool->isDamageableItem()) {
                             maxLimit = std::min(maxLimit, (tool->getMaxDamage() - tool->getDamageValue() - 1));
 
-                            if (ConfImpl::cfg.economy.enabled && confBlock.cost != 0) {
+                            if (Config::cfg.economy.enabled && confBlock.cost != 0) {
                                 maxLimit = std::min(
                                     maxLimit,
                                     static_cast<int>(EconomySystem::getInstance().get(*player) / confBlock.cost)
@@ -194,23 +191,24 @@ void core::registerEvent() {
         );
 }
 
+
 void core::miner(const int& taskID, const BlockPos stratPos) {
     static std::vector<std::tuple<int, int, int>> _dirDefault = {
-        {1,  0,  0 }, // 右
-        {-1, 0,  0 }, // 左
-        {0,  1,  0 }, // 上
-        {0,  -1, 0 }, // 下
-        {0,  0,  1 }, // 前
-        {0,  0,  -1}  // 后
+        {1,  0,  0 },
+        {-1, 0,  0 },
+        {0,  1,  0 },
+        {0,  -1, 0 },
+        {0,  0,  1 },
+        {0,  0,  -1}
     };
     // 3x3x3
     static std::vector<std::tuple<int, int, int>> _dirCube = {
-        {1,  0,  0 }, // 右
-        {-1, 0,  0 }, // 左
-        {0,  1,  0 }, // 上
-        {0,  -1, 0 }, // 下
-        {0,  0,  1 }, // 前
-        {0,  0,  -1}, // 后
+        {1,  0,  0 },
+        {-1, 0,  0 },
+        {0,  1,  0 },
+        {0,  -1, 0 },
+        {0,  0,  1 },
+        {0,  0,  -1},
         {1,  0,  1 },
         {-1, 0,  1 },
         {0,  1,  1 },
@@ -234,9 +232,9 @@ void core::miner(const int& taskID, const BlockPos stratPos) {
     };
     try {
         auto&       task      = mTaskList[taskID];
-        auto const& confBlock = ConfImpl::cfg.blocks[task.mBlockTypeName];
+        auto const& confBlock = Config::cfg.blocks[task.mBlockTypeName];
 
-        auto& dirs = confBlock.destroyMod == DestroyMod::Cube ? _dirCube : _dirDefault;
+        auto& dirs = confBlock.destroyMod == Config::DestroyMode::Cube ? _dirCube : _dirDefault;
 
         BlockSource& bs  = task.mPlayer->getDimensionBlockSource();
         auto&        bus = ll::event::EventBus::getInstance();
@@ -287,7 +285,7 @@ void core::miner(const int& taskID, const BlockPos stratPos) {
                     const Block*       nextBlock    = &bs.getBlock(nextPos);
                     std::string const& nextTypeName = nextBlock->getTypeName();
 
-                    if (task.mBlockTypeName == nextTypeName || some(confBlock.similarBlock, nextTypeName)) {
+                    if (task.mBlockTypeName == nextTypeName || confBlock.similarBlock.contains(nextTypeName)) {
                         mQueue.emplace_back(nextBlock, nextPos);
                     }
                 }
@@ -318,8 +316,7 @@ void core::miner(const int& taskID, const BlockPos stratPos) {
                     "连锁 {} 个方块, 消耗 {} 点耐久{}, 耗时 {}ms",
                     std::to_string(task.mCount),
                     std::to_string(task.mDeductDamage),
-                    ConfImpl::cfg.economy.enabled ? ", " + ConfImpl::cfg.economy.economyName + std::to_string(cost)
-                                                  : "",
+                    Config::cfg.economy.enabled ? ", " + Config::cfg.economy.economyName + std::to_string(cost) : "",
                     duration.count()
                 );
             }

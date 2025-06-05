@@ -1,7 +1,7 @@
 #include "EconomySystem.h"
-#include "Config.h"
 #include "LLMoney.h"
 #include "McUtils.h"
+#include "config/Config.h"
 #include "ll/api/i18n/I18n.h"
 #include "ll/api/service/Bedrock.h"
 #include "mc/world/level/Level.h"
@@ -12,6 +12,7 @@
 #include <mc/world/scores/Scoreboard.h>
 #include <mc/world/scores/ScoreboardId.h>
 #include <stdexcept>
+
 
 
 namespace fm {

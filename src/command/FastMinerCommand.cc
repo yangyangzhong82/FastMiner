@@ -1,8 +1,8 @@
-#include "Command.h"
-#include "Config.h"
-#include "GUI.h"
-#include "JsonUtils.h"
+#include "FastMinerCommand.h"
 #include "McUtils.h"
+#include "config/Config.h"
+#include "config/PlayerConfig.h"
+#include "gui/Form.h"
 #include "ll/api/form/CustomForm.h"
 #include "ll/api/form/FormBase.h"
 #include "ll/api/form/SimpleForm.h"
@@ -15,6 +15,7 @@
 #include "mc/world/item/SaveContext.h"
 #include "mc/world/item/SaveContextFactory.h"
 #include "mc/world/level/block/Block.h"
+#include "mod/FastMiner.h"
 #include <cstdint>
 #include <fmt/core.h>
 #include <initializer_list>
@@ -45,8 +46,6 @@
 #include <sstream>
 
 
-using ConfImpl = fm::config::ConfImpl;
-
 namespace fm {
 
 
@@ -54,6 +53,7 @@ struct StatusOption {
     enum class Status : bool { off = false, on = true } state;
 };
 
+inline constexpr auto ERR_ONLY_PLAYER_USE = "This command can only be used by players.";
 
 void FastMinerCommand::setup() {
     auto& cmd = ll::command::CommandRegistrar::getInstance().getOrCreateCommand("fm", "FastMiner - 连锁采集");
@@ -61,21 +61,21 @@ void FastMinerCommand::setup() {
     // fm
     cmd.overload().execute([](CommandOrigin const& ori, CommandOutput& out) {
         if (ori.getOriginType() != CommandOriginType::Player) {
-            return mc_utils::sendText<mc_utils::LogLevel::Error>(out, "此命令仅限玩家使用");
+            return mc_utils::sendText<mc_utils::LogLevel::Error>(out, ERR_ONLY_PLAYER_USE);
         }
         Player& pl = *static_cast<Player*>(ori.getEntity());
-        gui::sendSettingGUI(pl);
+        gui::sendPlayerConfigGUI(pl);
     });
 
     // fm <on/off>
     cmd.overload<StatusOption>().required("state").execute(
         [](CommandOrigin const& ori, CommandOutput& out, StatusOption const& opt) {
             if (ori.getOriginType() != CommandOriginType::Player) {
-                return mc_utils::sendText<mc_utils::LogLevel::Error>(out, "此命令仅限玩家使用");
+                return mc_utils::sendText<mc_utils::LogLevel::Error>(out, ERR_ONLY_PLAYER_USE);
             }
             Player& pl = *static_cast<Player*>(ori.getEntity());
 
-            ConfImpl::setEnable(pl.getUuid().asString(), "enable", (bool)opt.state);
+            PlayerConfig::setEnabled(pl.getUuid().asString(), PlayerConfig::KEY_ENABLE, (bool)opt.state);
             mc_utils::sendText(pl, "设置已保存");
         }
     );
@@ -83,20 +83,20 @@ void FastMinerCommand::setup() {
     // fm manager
     cmd.overload().text("manager").execute([](CommandOrigin const& ori, CommandOutput& out) {
         if (ori.getOriginType() != CommandOriginType::Player) {
-            return mc_utils::sendText<mc_utils::LogLevel::Error>(out, "此命令仅限玩家使用");
+            return mc_utils::sendText<mc_utils::LogLevel::Error>(out, ERR_ONLY_PLAYER_USE);
         }
         Player& pl = *static_cast<Player*>(ori.getEntity());
         if (!pl.isOperator()) {
             return mc_utils::sendText<mc_utils::LogLevel::Error>(out, "无权限");
         }
-        gui::sendBlockManager(pl);
+        gui::sendOpBlockManager(pl);
     });
 
 #ifdef DEBUG
     // fm debug unbreakable
     cmd.overload().text("debug").text("unbreakable").execute([](CommandOrigin const& ori, CommandOutput& out) {
         if (ori.getOriginType() != CommandOriginType::Player) {
-            return mc_utils::sendText<mc_utils::LogLevel::Error>(out, "此命令仅限玩家使用");
+            return mc_utils::sendText<mc_utils::LogLevel::Error>(out, ERR_ONLY_PLAYER_USE);
         }
         Player& pl = *static_cast<Player*>(ori.getEntity());
 

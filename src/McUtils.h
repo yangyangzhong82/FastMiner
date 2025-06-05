@@ -81,11 +81,13 @@ inline void executeCommand(const std::string& cmd, Player* player) {
     return SynchedActorDataAccess::getActorFlag(player.getEntityContext(), ActorFlags::Sneaking);
 }
 
+// ItemStackBase::canDestroy
 [[nodiscard]] inline bool CanDestroyBlock(ItemStackBase const& item, Block const& block) {
     auto legacy = &block.getLegacyBlock();
     return std::find(item.mCanDestroy.begin(), item.mCanDestroy.end(), legacy) != item.mCanDestroy.end();
 }
 
+// ItemStackBase::canDestroySpecial
 [[nodiscard]] inline bool CanDestroySpecial(ItemStackBase const& item, Block const& block) {
     auto it = item.mItem.get();
     if (!it) {
