@@ -13,6 +13,7 @@ end
 
 add_requires("levibuildscript")
 add_requires("legacymoney 0.9.0-rc.1")
+add_requires("abseil 20250127.0")
 
 
 if not has_config("vs_runtime") then
@@ -47,6 +48,7 @@ target("FastMiner") -- Change this to your mod name.
     set_kind("shared")
     set_languages("c++20")
     set_symbols("debug")
+    add_packages("abseil")
 
     if is_mode("debug") then
         add_defines("DEBUG")

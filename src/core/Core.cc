@@ -21,6 +21,8 @@
 #include <tuple>
 #include <vector>
 
+#include "absl/container/flat_hash_map.h"
+#include "absl/container/flat_hash_set.h"
 
 #define logger fm::FastMiner::getInstance().getSelf().getLogger()
 
@@ -43,22 +45,26 @@ struct TaskInfo {
 
 ll::event::ListenerPtr _mPlayerDestroyBlock;
 
-std::unordered_map<int, TaskInfo> mTaskList;    // 任务列表
-std::unordered_set<size_t>        mRuningBlock; // 正在执行任务的方块
+absl::flat_hash_map<int, TaskInfo> mTaskList;    // 任务列表
+absl::flat_hash_set<size_t>        mRuningBlock; // 正在执行任务的方块
 
 void nextTick(std::function<void()> func) {
     using ll::chrono_literals::operator""_tick;
     ll::coro::keepThis([func{std::move(func)}]() -> ll::coro::CoroTask<> {
         co_await 1_tick;
-        logger.debug("111");
         func();
         co_return;
     }).launch(ll::thread::ServerThreadExecutor::getDefault());
 }
 
 size_t core::hash(const BlockPos& v3, const int& dim) {
-    std::hash<int> hasf;
-    return hasf(v3.x) ^ hasf(v3.y) ^ hasf(v3.z) ^ hasf(dim);
+    // 使用更高效的空间哈希算法，避免哈希冲突
+    // 使用位移和乘法代替多次哈希计算
+    constexpr size_t prime1 = 73856093;
+    constexpr size_t prime2 = 19349663;
+    constexpr size_t prime3 = 83492791;
+    return (static_cast<size_t>(v3.x) * prime1) ^ (static_cast<size_t>(v3.y) * prime2)
+         ^ (static_cast<size_t>(v3.z) * prime3) ^ (static_cast<size_t>(dim) << 16);
 }
 size_t core::hash(ll::event::player::PlayerDestroyBlockEvent const& ev) {
     return core::hash(ev.pos(), ev.self().getDimensionId().id);
@@ -240,7 +246,7 @@ void core::miner(const int& taskID, const BlockPos stratPos) {
         auto&        bus = ll::event::EventBus::getInstance();
 
         std::vector<std::pair<const Block*, BlockPos>> mQueue;
-        std::unordered_set<size_t>                     mVisited;
+        absl::flat_hash_set<size_t>                    mVisited;
 
         mQueue.reserve(task.mLimit); // 预分配空间
         mVisited.reserve(task.mLimit * 2);
