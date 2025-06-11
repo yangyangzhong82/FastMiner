@@ -245,21 +245,20 @@ void core::miner(const int& taskID, const BlockPos stratPos) {
         BlockSource& bs  = task.mPlayer->getDimensionBlockSource();
         auto&        bus = ll::event::EventBus::getInstance();
 
-        std::vector<std::pair<const Block*, BlockPos>> mQueue;
-        absl::flat_hash_set<size_t>                    mVisited;
-
-        mQueue.reserve(task.mLimit); // 预分配空间
-        mVisited.reserve(task.mLimit * 2);
+        std::deque<std::pair<const Block*, BlockPos>> queue;
+        absl::flat_hash_set<size_t>                   visited;
+        visited.reserve(task.mLimit * 2);
 
         size_t startHash = hash(stratPos, task.mDimension);
-        mQueue.emplace_back(&bs.getBlock(stratPos), stratPos);
-        mVisited.insert(startHash);
+        queue.emplace_back(&bs.getBlock(stratPos), stratPos);
+        visited.insert(startHash);
 
+        auto start = std::chrono::high_resolution_clock::now();
+        while (task.mCount < task.mLimit && !queue.empty()) {
+            auto element = queue.front();
+            queue.pop_front();
 
-        auto   start      = std::chrono::high_resolution_clock::now();
-        size_t queueIndex = 0;
-        while (task.mCount < task.mLimit && queueIndex < mQueue.size()) {
-            auto const& [curBlock, curPos] = mQueue[queueIndex++];
+            auto const& [curBlock, curPos] = element;
 
             // 处理
             if (!curBlock->isAir()) {
@@ -287,12 +286,12 @@ void core::miner(const int& taskID, const BlockPos stratPos) {
                 BlockPos nextPos(curPos.x + x, curPos.y + y, curPos.z + z);
                 size_t   hashed = hash(nextPos, task.mDimension);
 
-                if (mVisited.insert(hashed).second) { // 如果插入成功（即之前未访问过）
+                if (visited.insert(hashed).second) { // 如果插入成功（即之前未访问过）
                     const Block*       nextBlock    = &bs.getBlock(nextPos);
                     std::string const& nextTypeName = nextBlock->getTypeName();
 
                     if (task.mBlockTypeName == nextTypeName || confBlock.similarBlock.contains(nextTypeName)) {
-                        mQueue.emplace_back(nextBlock, std::move(nextPos));
+                        queue.emplace_back(nextBlock, std::move(nextPos));
                     }
                 }
             }

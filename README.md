@@ -2,11 +2,19 @@
 
 一个基于 Levilamina 的快速连锁采集 Mod(Plugin)。
 
-FastMiner 与其它同类插件一样的采用 BFS，但不同的是，FastMiner 优化整个执行逻辑，做到更快的处理速度。
+## 性能测试
 
-FastMiner 的性能可以做到 1w 方块，耗时 3 秒内(2782ms)，应对平常场景绰绰有余
+> 测试环境均为: Windows 10 22H2 + 同时运行客户端和服务端  
+> 配置: i5-6300HQ @2.9Ghz + D4-8G-2133
 
-> Ps: 测试机器 CPU 为 12 年前的机器(CPU：AMD-A6-3420m @1.5Ghz)，以现在的 CPU 性能更快
+| 数量 | 耗时    | 平均         |
+| ---- | ------- | ------------ |
+| 5    | 0ms     | /            |
+| 33   | 3ms     | /            |
+| 67   | 8ms     | /            |
+| 1k   | 117ms   | 0.117ms/个   |
+| 1w   | 1261ms  | 0.1261ms/个  |
+| 10w  | 13592ms | 0.13592ms/个 |
 
 ## 安装
 
@@ -21,7 +29,7 @@ lip install github.com/engsr6982/fastminer
 - /fm 打开设置 GUI
 - /fm off 关闭连锁采集
 - /fm on 开启连锁采集
-- /fm manager 方块管理GUI（OP）
+- /fm manager 方块管理 GUI（OP）
 
 ## 配置文件
 
