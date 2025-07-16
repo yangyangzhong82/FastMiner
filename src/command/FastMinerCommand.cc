@@ -9,6 +9,7 @@
 #include "magic_enum.hpp"
 #include "mc/nbt/ByteTag.h"
 #include "mc/nbt/CompoundTag.h"
+#include "mc/platform/UUID.h"
 #include "mc/world/actor/player/Player.h"
 #include "mc/world/item/Item.h"
 #include "mc/world/item/ItemStack.h"
@@ -44,7 +45,7 @@
 #include <mc/world/actor/Actor.h>
 #include <mc/world/actor/player/Player.h>
 #include <sstream>
-
+#include <string>
 
 namespace fm {
 
@@ -75,7 +76,7 @@ void FastMinerCommand::setup() {
             }
             Player& pl = *static_cast<Player*>(ori.getEntity());
 
-            PlayerConfig::setEnabled(pl.getUuid().asString(), PlayerConfig::KEY_ENABLE, (bool)opt.state);
+            PlayerConfig::setEnabled(pl.getUuid(), PlayerConfig::KEY_ENABLE, (bool)opt.state);
             mc_utils::sendText(pl, "设置已保存");
         }
     );

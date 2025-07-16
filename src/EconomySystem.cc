@@ -7,12 +7,12 @@
 #include "mc/world/level/Level.h"
 #include "mc/world/scores/PlayerScoreSetFunction.h"
 #include "mc/world/scores/ScoreInfo.h"
+#include "mc/world/scores/ScoreboardOperationResult.h"
 #include <mc/world/actor/player/Player.h>
 #include <mc/world/scores/Objective.h>
 #include <mc/world/scores/Scoreboard.h>
 #include <mc/world/scores/ScoreboardId.h>
 #include <stdexcept>
-
 
 
 namespace fm {
@@ -46,9 +46,9 @@ bool ScoreBoard_Set(Player& player, int score, std::string const& scoreName) {
     if (id.mRawID == ScoreboardId::INVALID().mRawID) {
         scoreboard.createScoreboardId(player);
     }
-    bool isSuccess = false;
-    scoreboard.modifyPlayerScore(isSuccess, id, *obj, score, PlayerScoreSetFunction::Set);
-    return isSuccess;
+    ScoreboardOperationResult res;
+    scoreboard.modifyPlayerScore(res, id, *obj, score, PlayerScoreSetFunction::Set);
+    return res == ScoreboardOperationResult::Success;
 }
 
 bool ScoreBoard_Add(Player& player, int score, std::string const& scoreName) {
@@ -62,9 +62,9 @@ bool ScoreBoard_Add(Player& player, int score, std::string const& scoreName) {
     if (id.mRawID == ScoreboardId::INVALID().mRawID) {
         scoreboard.createScoreboardId(player);
     }
-    bool isSuccess = false;
-    scoreboard.modifyPlayerScore(isSuccess, id, *obj, score, PlayerScoreSetFunction::Add);
-    return isSuccess;
+    ScoreboardOperationResult res;
+    scoreboard.modifyPlayerScore(res, id, *obj, score, PlayerScoreSetFunction::Add);
+    return res == ScoreboardOperationResult::Success;
 }
 
 bool ScoreBoard_Reduce(Player& player, int score, std::string const& scoreName) {
@@ -78,9 +78,9 @@ bool ScoreBoard_Reduce(Player& player, int score, std::string const& scoreName) 
     if (id.mRawID == ScoreboardId::INVALID().mRawID) {
         scoreboard.createScoreboardId(player);
     }
-    bool isSuccess = false;
-    scoreboard.modifyPlayerScore(isSuccess, id, *obj, score, PlayerScoreSetFunction::Subtract);
-    return isSuccess;
+    ScoreboardOperationResult res;
+    scoreboard.modifyPlayerScore(res, id, *obj, score, PlayerScoreSetFunction::Subtract);
+    return res == ScoreboardOperationResult::Success;
 }
 
 

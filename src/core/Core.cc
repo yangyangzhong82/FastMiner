@@ -106,11 +106,11 @@ void core::registerEvent() {
                 const Block*       block    = &player->getDimensionBlockSource().getBlock(ev.pos());
                 std::string const& typeName = block->getTypeName();
 
-                if (player->getPlayerGameType() != GameType::Survival ||                // 非生存模式
-                    !PlayerConfig::isEnabled(player->getUuid().asString(), "enable") || // 未启用
-                    !PlayerConfig::isEnabled(player->getUuid().asString(), typeName) || // 方块未启用
-                    (PlayerConfig::isEnabled(player->getUuid().asString(), "sneak")
-                     && !mc_utils::PlayerIsSneaking(*player)) // 未潜行
+                if (player->getPlayerGameType() != GameType::Survival ||     // 非生存模式
+                    !PlayerConfig::isEnabled(player->getUuid(), "enable") || // 未启用
+                    !PlayerConfig::isEnabled(player->getUuid(), typeName) || // 方块未启用
+                    (PlayerConfig::isEnabled(player->getUuid(), "sneak") && !mc_utils::PlayerIsSneaking(*player)
+                    ) // 未潜行
                 ) {
                     return;
                 }
