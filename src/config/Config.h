@@ -155,7 +155,7 @@ struct Impl {
             }
         }},
         {"minecraft:jungle_log", {
-            .name = "云杉木原木",
+            .name = "丛林原木",
             .tools = MINECRAFT_AXE_TOOL
         }},
         {"minecraft:lapis_ore", {
