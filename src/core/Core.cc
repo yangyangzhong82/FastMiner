@@ -1,7 +1,7 @@
 #include "core/Core.h"
-#include "EconomySystem.h"
 #include "McUtils.h"
 #include "config/PlayerConfig.h"
+#include "economy/EconomySystem.h"
 #include "ll/api/base/StdInt.h"
 #include "ll/api/coro/Collect.h"
 #include "ll/api/coro/CoroTask.h"
@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <tuple>
 #include <vector>
+
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
@@ -106,11 +107,12 @@ void core::registerEvent() {
                 const Block*       block    = &player->getDimensionBlockSource().getBlock(ev.pos());
                 std::string const& typeName = block->getTypeName();
 
-                if (player->getPlayerGameType() != GameType::Survival ||     // 非生存模式
+                if (
+                    player->getPlayerGameType() != GameType::Survival ||     // 非生存模式
                     !PlayerConfig::isEnabled(player->getUuid(), "enable") || // 未启用
                     !PlayerConfig::isEnabled(player->getUuid(), typeName) || // 方块未启用
-                    (PlayerConfig::isEnabled(player->getUuid(), "sneak") && !mc_utils::PlayerIsSneaking(*player)
-                    ) // 未潜行
+                    (PlayerConfig::isEnabled(player->getUuid(), "sneak")
+                     && !mc_utils::PlayerIsSneaking(*player)) // 未潜行
                 ) {
                     return;
                 }
@@ -166,7 +168,7 @@ void core::registerEvent() {
                             if (Config::cfg.economy.enabled && confBlock.cost != 0) {
                                 maxLimit = std::min(
                                     maxLimit,
-                                    static_cast<int>(EconomySystem::getInstance().get(*player) / confBlock.cost)
+                                    static_cast<int>(EconomySystem::getInstance()->get(*player) / confBlock.cost)
                                 );
                             }
                         }
@@ -312,7 +314,7 @@ void core::miner(const int& taskID, const BlockPos stratPos) {
                 }
 
                 auto cost = confBlock.cost * (task.mCount - 1);
-                EconomySystem::getInstance().reduce(*pl, cost);
+                EconomySystem::getInstance()->reduce(*pl, cost);
 
                 pl->refreshInventory();
 

@@ -3,10 +3,10 @@
 #include "config/Config.h"
 #include "config/PlayerConfig.h"
 #include "core/Core.h"
+#include "economy/EconomySystem.h"
 #include "ll/api/io/Logger.h"
 #include "ll/api/mod/RegisterHelper.h"
 #include <memory>
-
 
 
 namespace fm {
@@ -30,6 +30,8 @@ bool FastMiner::load() {
 }
 
 bool FastMiner::enable() {
+    EconomySystem::getInstance().initEconomySystem();
+
     FastMinerCommand::setup();
     core::registerEvent();
 

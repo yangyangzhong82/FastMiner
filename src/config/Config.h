@@ -1,5 +1,5 @@
 #pragma once
-#include "EconomySystem.h"
+#include "economy/EconomyConfig.h"
 #include <sys/stat.h>
 #include <unordered_map>
 #include <unordered_set>
@@ -45,9 +45,9 @@ using Blocks = std::unordered_map<std::string, BlockItem>;
 
 
 struct Impl {
-    int version = 3;
+    int version = 4;
 
-    EconomySystemConfig economy; // 经济系统
+    EconomyConfig economy; // 经济系统
 
     Blocks blocks = {
         // clang-format off
