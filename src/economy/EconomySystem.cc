@@ -21,6 +21,14 @@ std::shared_ptr<internal::IEconomyInterface> EconomySystem::createEconomySystem(
     switch (cfg.kit) {
     case fm::EconomyKit::LegacyMoney: {
         fm::FastMiner::getInstance().getSelf().getLogger().debug("using internal::LegacyMoneyInterface");
+        if (!internal::LegacyMoneyInterface::isLegacyMoneyLoaded()) {
+            FastMiner::getInstance().getSelf().getLogger().error(
+                "LegacyMoney is not loaded, please check config, or disable economy system"
+            );
+            cfg.enabled = false;
+            Config::save();
+            return std::make_shared<internal::EmtpyInterface>();
+        }
         return std::make_shared<internal::LegacyMoneyInterface>();
     }
     case fm::EconomyKit::ScoreBoard: {

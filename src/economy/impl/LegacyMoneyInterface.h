@@ -9,7 +9,7 @@ class LegacyMoneyInterface final : public IEconomyInterface {
 public:
     explicit LegacyMoneyInterface();
 
-    bool isLegacyMoneyLoaded() const;
+    static bool isLegacyMoneyLoaded();
 
     std::optional<std::string> getXuidFromPlayerInfo(mce::UUID const& uuid) const; // 从 PlayerInfo 获取 Xuid
 

@@ -29,7 +29,7 @@ std::optional<std::string> LegacyMoneyInterface::getXuidFromPlayerInfo(mce::UUID
     return info->xuid;
 }
 
-bool LegacyMoneyInterface::isLegacyMoneyLoaded() const { return GetModuleHandle(LEGACY_MONEY_MODULE_NAME) != nullptr; }
+bool LegacyMoneyInterface::isLegacyMoneyLoaded() { return GetModuleHandle(LEGACY_MONEY_MODULE_NAME) != nullptr; }
 
 long long LegacyMoneyInterface::get(Player& player) const {
     if (!isLegacyMoneyLoaded()) {
