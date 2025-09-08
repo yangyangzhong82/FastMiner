@@ -44,7 +44,7 @@ void __sendEditBlockTools(Player& player, std::string const& typeName) {
             mc_utils::sendText<mc_utils::LogLevel::Error>(pl, "请手持一个工具!");
             return;
         }
-        Config::cfg.blocks[typeName].tools.emplace(item);
+        Config::cfg.blocks[typeName].tools.emplace(item.getTypeName());
         Config::save();
     });
     f.appendDivider();
@@ -71,7 +71,7 @@ void __sendEditSimilarBlock(Player& player, std::string const& typeName) {
             mc_utils::sendText<mc_utils::LogLevel::Error>(pl, "请手持一个方块!");
             return;
         }
-        Config::cfg.blocks[typeName].similarBlock.emplace(item);
+        Config::cfg.blocks[typeName].similarBlock.emplace(item.mBlock->getTypeName());
         Config::save();
     });
     f.appendDivider();
