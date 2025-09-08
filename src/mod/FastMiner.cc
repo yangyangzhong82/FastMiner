@@ -4,9 +4,7 @@
 #include "config/PlayerConfig.h"
 #include "core/Core.h"
 #include "economy/EconomySystem.h"
-#include "ll/api/io/Logger.h"
 #include "ll/api/mod/RegisterHelper.h"
-#include <memory>
 
 
 namespace fm {
@@ -16,20 +14,14 @@ FastMiner& FastMiner::getInstance() {
     return instance;
 }
 
-bool FastMiner::load() {
-    auto& logger = getSelf().getLogger();
-
-#ifdef DEBUG
-    logger.setLevel(ll::io::LogLevel::Debug);
-#endif
-
-    Config::load();
-    PlayerConfig::load();
-
-    return true;
-}
+bool FastMiner::load() { return true; }
 
 bool FastMiner::enable() {
+    Config::buildDefaultConfig();
+    Config::load();
+
+    PlayerConfig::load();
+
     EconomySystem::getInstance().initEconomySystem();
 
     FastMinerCommand::setup();
