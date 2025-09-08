@@ -38,6 +38,9 @@ void __sendEditBlockTools(Player& player, std::string const& typeName) {
     auto& tools = Config::cfg.blocks[typeName].tools;
 
     SimpleForm f{PLUGIN_NAME};
+    f.appendButton("返回", "textures/ui/icon_import", "path", [typeName](Player& pl) {
+        _sendBlockViewer(pl, typeName);
+    });
     f.appendButton("添加手持工具", "textures/ui/color_plus", "path", [typeName](Player& pl) {
         auto const& item = pl.getSelectedItem();
         if (item.isNull() || item.isBlock()) {
@@ -46,6 +49,7 @@ void __sendEditBlockTools(Player& player, std::string const& typeName) {
         }
         Config::cfg.blocks[typeName].tools.emplace(item.getTypeName());
         Config::save();
+        __sendEditBlockTools(pl, typeName);
     });
     f.appendDivider();
     for (auto const& tool : tools) {
@@ -55,6 +59,7 @@ void __sendEditBlockTools(Player& player, std::string const& typeName) {
             [tool, typeName]([[maybe_unused]] Player& pl) {
                 Config::cfg.blocks[typeName].tools.erase(tool);
                 Config::save();
+                __sendEditBlockTools(pl, typeName);
             }
         );
     }
@@ -65,6 +70,9 @@ void __sendEditSimilarBlock(Player& player, std::string const& typeName) {
     auto& similarBlock = Config::cfg.blocks[typeName].similarBlock;
 
     SimpleForm f{PLUGIN_NAME};
+    f.appendButton("返回", "textures/ui/icon_import", "path", [typeName](Player& pl) {
+        _sendBlockViewer(pl, typeName);
+    });
     f.appendButton("添加手持方块", "textures/ui/color_plus", "path", [typeName](Player& pl) {
         auto const& item = pl.getSelectedItem();
         if (item.isNull() || item.isBlock()) {
@@ -73,6 +81,7 @@ void __sendEditSimilarBlock(Player& player, std::string const& typeName) {
         }
         Config::cfg.blocks[typeName].similarBlock.emplace(item.mBlock->getTypeName());
         Config::save();
+        __sendEditSimilarBlock(pl, typeName);
     });
     f.appendDivider();
     for (auto const& similar : similarBlock) {
@@ -82,6 +91,7 @@ void __sendEditSimilarBlock(Player& player, std::string const& typeName) {
             [similar, typeName]([[maybe_unused]] Player& pl) {
                 Config::cfg.blocks[typeName].similarBlock.erase(similar);
                 Config::save();
+                __sendEditSimilarBlock(pl, typeName);
             }
         );
     }
@@ -90,36 +100,34 @@ void __sendEditSimilarBlock(Player& player, std::string const& typeName) {
 
 void _sendEditBlockConfig(Player& player, std::string const& typeName) {
     auto const& block = Config::cfg.blocks[typeName];
-    try {
-        CustomForm f{PLUGIN_NAME};
+    CustomForm  f{PLUGIN_NAME};
 
-        f.appendInput("typeName", "命名空间", "string", typeName);
-        f.appendInput("name", "名称", "string", block.name);
-        f.appendInput("cost", "消耗经济", "int", std::to_string(block.cost));
-        f.appendInput("limit", "最大连锁数量", "int", std::to_string(block.limit));
+    f.appendInput("typeName", "命名空间", "string", typeName);
+    f.appendInput("name", "名称", "string", block.name);
+    f.appendInput("cost", "消耗经济", "int", std::to_string(block.cost));
+    f.appendInput("limit", "最大连锁数量", "int", std::to_string(block.limit));
 
-        f.appendDropdown("destroyMode", "破坏模式", DestroyModeType);
-        f.appendDropdown("silkTouchMode", "精准采集模式", SilkTouchType);
+    f.appendDropdown("destroyMode", "破坏模式", DestroyModeType);
+    f.appendDropdown("silkTouchMode", "精准采集模式", SilkTouchType);
 
-        f.sendTo(player, [last = typeName](Player& pl, CustomFormResult const& res, FormCancelReason) {
-            if (!res) return;
-            try {
-                std::string           typeName = std::get<std::string>(res->at("typeName"));
-                std::string           name     = std::get<std::string>(res->at("name"));
-                int                   cost     = std::stoi(std::get<std::string>(res->at("cost")));
-                int                   limit    = std::stoi(std::get<std::string>(res->at("limit")));
-                Config::DestroyMode   dmod     = DestroyModeMap.at(std::get<std::string>(res->at("destroyMode")));
-                Config::SilkTouchMode smod     = SilkTouchMap.at(std::get<std::string>(res->at("silkTouchMode")));
+    f.sendTo(player, [last = typeName](Player& pl, CustomFormResult const& res, FormCancelReason) {
+        if (!res) return;
+        try {
+            std::string           typeName = std::get<std::string>(res->at("typeName"));
+            std::string           name     = std::get<std::string>(res->at("name"));
+            int                   cost     = std::stoi(std::get<std::string>(res->at("cost")));
+            int                   limit    = std::stoi(std::get<std::string>(res->at("limit")));
+            Config::DestroyMode   dmod     = DestroyModeMap.at(std::get<std::string>(res->at("destroyMode")));
+            Config::SilkTouchMode smod     = SilkTouchMap.at(std::get<std::string>(res->at("silkTouchMode")));
 
-                Config::cfg.blocks[typeName] = Config::BlockConfig{name, cost, limit, dmod, smod};
-                if (last != typeName) {
-                    Config::cfg.blocks.erase(last);
-                }
-                Config::save();
-                sendOpBlockManager(pl);
-            } catch (...) {}
-        });
-    } catch (...) {}
+            Config::cfg.blocks[typeName] = Config::BlockConfig{name, cost, limit, dmod, smod};
+            if (last != typeName) {
+                Config::cfg.blocks.erase(last);
+            }
+            Config::save();
+            _sendBlockViewer(pl, typeName);
+        } catch (...) {}
+    });
 }
 
 void _addHandheldItemBlock(Player& player) {

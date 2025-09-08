@@ -7,6 +7,9 @@
 
 namespace fm::gui {
 
+void __sendEditBlockTools(Player& player, std::string const& typeName);
+
+void __sendEditSimilarBlock(Player& player, std::string const& typeName);
 
 void _sendEditBlockConfig(Player& player, std::string const& typeName);
 
