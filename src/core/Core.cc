@@ -144,9 +144,9 @@ void core::registerEvent() {
                     bool const canDestroyWithConfig   = 
                         (confBlock.tools.empty() || confBlock.tools.contains(toolType)) && // 未指定工具、指定工具
                         (
-                            (confBlock.silkTouchMod == Config::SilkTouchMode::Forbid && !hasSilkTouch) || // 禁止精准
-                            (confBlock.silkTouchMod == Config::SilkTouchMode::Need && hasSilkTouch) || // 需要精准
-                            confBlock.silkTouchMod == Config::SilkTouchMode::Unlimited // 无限制
+                            (confBlock.silkTouchMode == Config::SilkTouchMode::Forbid && !hasSilkTouch) || // 禁止精准
+                            (confBlock.silkTouchMode == Config::SilkTouchMode::Need && hasSilkTouch) || // 需要精准
+                            confBlock.silkTouchMode == Config::SilkTouchMode::Unlimited // 无限制
                         );
             // clang-format on
 
@@ -242,7 +242,7 @@ void core::miner(const int& taskID, const BlockPos stratPos) {
         auto&       task      = mTaskList[taskID];
         auto const& confBlock = Config::cfg.blocks[task.mBlockTypeName];
 
-        auto& dirs = confBlock.destroyMod == Config::DestroyMode::Cube ? _dirCube : _dirDefault;
+        auto& dirs = confBlock.destroyMode == Config::DestroyMode::Cube ? _dirCube : _dirDefault;
 
         BlockSource& bs  = task.mPlayer->getDimensionBlockSource();
         auto&        bus = ll::event::EventBus::getInstance();
