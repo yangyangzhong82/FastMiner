@@ -3,6 +3,7 @@
 #include "McUtils.h"
 #include "config/Config.h"
 #include "config/PlayerConfig.h"
+#include "fmt/format.h"
 #include "ll/api/form/CustomForm.h"
 #include "ll/api/form/FormBase.h"
 #include "ll/api/form/SimpleForm.h"
@@ -33,6 +34,59 @@ inline std::unordered_map<std::string, Config::SilkTouchMode> const SilkTouchMap
     {SilkTouchType[2], Config::SilkTouchMode::Need     }
 };
 
+void __sendEditBlockTools(Player& player, std::string const& typeName) {
+    auto& tools = Config::cfg.blocks[typeName].tools;
+
+    SimpleForm f{PLUGIN_NAME};
+    f.appendButton("添加手持工具", "textures/ui/color_plus", "path", [typeName](Player& pl) {
+        auto const& item = pl.getSelectedItem();
+        if (item.isNull() || item.isBlock()) {
+            mc_utils::sendText<mc_utils::LogLevel::Error>(pl, "请手持一个工具!");
+            return;
+        }
+        Config::cfg.blocks[typeName].tools.emplace(item);
+        Config::save();
+    });
+    f.appendDivider();
+    for (auto const& tool : tools) {
+        ItemStack item{tool};
+        f.appendButton(
+            fmt::format("{}\n点击移除工具", item.isNull() ? tool : item.getName()),
+            [tool, typeName]([[maybe_unused]] Player& pl) {
+                Config::cfg.blocks[typeName].tools.erase(tool);
+                Config::save();
+            }
+        );
+    }
+    f.sendTo(player);
+}
+
+void __sendEditSimilarBlock(Player& player, std::string const& typeName) {
+    auto& similarBlock = Config::cfg.blocks[typeName].similarBlock;
+
+    SimpleForm f{PLUGIN_NAME};
+    f.appendButton("添加手持方块", "textures/ui/color_plus", "path", [typeName](Player& pl) {
+        auto const& item = pl.getSelectedItem();
+        if (item.isNull() || item.isBlock()) {
+            mc_utils::sendText<mc_utils::LogLevel::Error>(pl, "请手持一个方块!");
+            return;
+        }
+        Config::cfg.blocks[typeName].similarBlock.emplace(item);
+        Config::save();
+    });
+    f.appendDivider();
+    for (auto const& similar : similarBlock) {
+        ItemStack item{similar};
+        f.appendButton(
+            fmt::format("{}\n点击移除方块", item.isNull() && !item.isBlock() ? similar : item.getName()),
+            [similar, typeName]([[maybe_unused]] Player& pl) {
+                Config::cfg.blocks[typeName].similarBlock.erase(similar);
+                Config::save();
+            }
+        );
+    }
+    f.sendTo(player);
+}
 
 void _sendEditBlockConfig(Player& player, std::string const& typeName) {
     auto const& block = Config::cfg.blocks[typeName];
@@ -44,8 +98,8 @@ void _sendEditBlockConfig(Player& player, std::string const& typeName) {
         f.appendInput("cost", "消耗经济", "int", std::to_string(block.cost));
         f.appendInput("limit", "最大连锁数量", "int", std::to_string(block.limit));
 
-        f.appendDropdown("destroyType", "破坏模式", DestroyModeType);
-        f.appendDropdown("silkTouchType", "精准采集模式", SilkTouchType);
+        f.appendDropdown("destroyMode", "破坏模式", DestroyModeType);
+        f.appendDropdown("silkTouchMode", "精准采集模式", SilkTouchType);
 
         f.sendTo(player, [last = typeName](Player& pl, CustomFormResult const& res, FormCancelReason) {
             if (!res) return;
@@ -54,10 +108,10 @@ void _sendEditBlockConfig(Player& player, std::string const& typeName) {
                 std::string           name     = std::get<std::string>(res->at("name"));
                 int                   cost     = std::stoi(std::get<std::string>(res->at("cost")));
                 int                   limit    = std::stoi(std::get<std::string>(res->at("limit")));
-                Config::DestroyMode   dmod     = DestroyModeMap.at(std::get<std::string>(res->at("destroyType")));
-                Config::SilkTouchMode smod     = SilkTouchMap.at(std::get<std::string>(res->at("silkTouchType")));
+                Config::DestroyMode   dmod     = DestroyModeMap.at(std::get<std::string>(res->at("destroyMode")));
+                Config::SilkTouchMode smod     = SilkTouchMap.at(std::get<std::string>(res->at("silkTouchMode")));
 
-                Config::cfg.blocks[typeName] = Config::BlockItem{name, cost, limit, dmod, smod};
+                Config::cfg.blocks[typeName] = Config::BlockConfig{name, cost, limit, dmod, smod};
                 if (last != typeName) {
                     Config::cfg.blocks.erase(last);
                 }
@@ -69,12 +123,17 @@ void _sendEditBlockConfig(Player& player, std::string const& typeName) {
 }
 
 void _addHandheldItemBlock(Player& player) {
-    auto const& item  = player.getSelectedItem();
-    auto        block = item.mBlock;
-    if (!block) {
-        mc_utils::sendText<mc_utils::LogLevel::Error>(player, "获取方块实例失败，当前物品可能没有方块实例");
+    auto const& item = player.getSelectedItem();
+    if (item.isNull()) {
+        mc_utils::sendText<mc_utils::LogLevel::Error>(player, "请手持一个方块!");
+    }
+
+    if (!item.isBlock()) {
+        mc_utils::sendText<mc_utils::LogLevel::Error>(player, "当前手持物品没有对应方块实例!");
         return;
     }
+    auto block = item.mBlock;
+
     Config::cfg.blocks[block->getTypeName()] = {.name = item.getName()};
     _sendEditBlockConfig(player, block->getTypeName());
 }
@@ -84,11 +143,24 @@ void _sendBlockViewer(Player& player, std::string const& typeName) {
 
     SimpleForm{PLUGIN_NAME}
         .setContent(json_utils::struct2json(block).dump(2))
+        .appendDivider()
         .appendButton(
-            "编辑",
+            "编辑基础信息",
             "textures/ui/book_edit_hover",
             "path",
             [typeName](Player& pl) { _sendEditBlockConfig(pl, typeName); }
+        )
+        .appendButton(
+            "编辑连锁工具",
+            "textures/ui/book_edit_hover",
+            "path",
+            [typeName](Player& pl) { __sendEditBlockTools(pl, typeName); }
+        )
+        .appendButton(
+            "编辑相似方块",
+            "textures/ui/book_edit_hover",
+            "path",
+            [typeName](Player& pl) { __sendEditSimilarBlock(pl, typeName); }
         )
         .appendButton(
             "删除",
@@ -96,7 +168,9 @@ void _sendBlockViewer(Player& player, std::string const& typeName) {
             "path",
             [typeName](Player& pl) {
                 Config::cfg.blocks.erase(typeName);
+                PlayerConfig::removeBlock(pl.getUuid(), typeName);
                 Config::save();
+                PlayerConfig::save();
                 sendOpBlockManager(pl);
             }
         )
@@ -109,6 +183,7 @@ void sendOpBlockManager(Player& player) {
     f.setContent("FastMiner - 管理面板");
 
     f.appendButton("添加手持方块", "textures/ui/color_plus", "path", [](Player& pl) { _addHandheldItemBlock(pl); });
+    f.appendDivider();
 
     for (auto& [k, v] : Config::cfg.blocks) {
         f.appendButton(v.name, [k](Player& pl) { _sendBlockViewer(pl, k); });
@@ -125,6 +200,7 @@ void sendPlayerConfigGUI(Player& player) {
     f.appendToggle(PlayerConfig::KEY_ENABLE, "启用连锁采集", PlayerConfig::isEnabled(uuid, PlayerConfig::KEY_ENABLE));
     f.appendToggle(PlayerConfig::KEY_SNEAK, "仅潜行时启用", PlayerConfig::isEnabled(uuid, PlayerConfig::KEY_SNEAK));
 
+    f.appendDivider();
     f.appendLabel(">>>  方块配置");
     for (auto const& [key, item] : Config::cfg.blocks) {
         f.appendToggle(key, item.name, PlayerConfig::isEnabled(uuid, key));

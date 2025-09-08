@@ -26,94 +26,94 @@ bool buildDefaultConfig() {
         // 树木类
         {VanillaBlockTypeIds::AcaciaLog(), BlockConfig{
             .name = "金合欢木原木",
-            .destroyMod = DestroyMode::Cube,
+            .destroyMode = DestroyMode::Cube,
             .tools = MinecraftAxeTools
         }},
-        {VanillaBlockTypeIds::BirchLog(), {
+        {VanillaBlockTypeIds::BirchLog(), BlockConfig{
             .name = "白桦木原木",
             .tools = MinecraftAxeTools
         }},
-        {VanillaBlockTypeIds::CherryLog(), {
+        {VanillaBlockTypeIds::CherryLog(), BlockConfig{
             .name = "樱花原木",
-            .destroyMod = DestroyMode::Cube,
+            .destroyMode = DestroyMode::Cube,
             .tools = MinecraftAxeTools
         }},
-        {VanillaBlockTypeIds::DarkOakLog(), {
+        {VanillaBlockTypeIds::DarkOakLog(), BlockConfig{
             .name = "深色橡木原木",
             .tools = MinecraftAxeTools
         }},
-        {VanillaBlockTypeIds::JungleLog(), {
+        {VanillaBlockTypeIds::JungleLog(), BlockConfig{
             .name = "丛林原木",
             .tools = MinecraftAxeTools
         }},
-        {VanillaBlockTypeIds::MangroveLog(), {
+        {VanillaBlockTypeIds::MangroveLog(), BlockConfig{
             .name = "红树原木",
             .tools = MinecraftAxeTools
         }},
-        {VanillaBlockTypeIds::SpruceLog(), {
+        {VanillaBlockTypeIds::SpruceLog(), BlockConfig{
             .name = "云杉木原木",
             .tools = MinecraftAxeTools
         }},
-        {VanillaBlockTypeIds::OakLog(), {
+        {VanillaBlockTypeIds::OakLog(), BlockConfig{
             .name = "橡木原木",
             .tools = MinecraftAxeTools
         }},
-        {VanillaBlockTypeIds::WarpedStem(), {
+        {VanillaBlockTypeIds::WarpedStem(), BlockConfig{
             .name = "诡异菌柄",
             .tools = MinecraftAxeTools
         }},
-        {VanillaBlockTypeIds::CrimsonStem(), {
+        {VanillaBlockTypeIds::CrimsonStem(), BlockConfig{
             .name = "绯红菌柄",
             .tools = MinecraftAxeTools
         }},
 
         // 矿石类
-        {VanillaBlockTypeIds::AncientDebris(), {
+        {VanillaBlockTypeIds::AncientDebris(), BlockConfig{
             .name = "远古残骸"
         }},
-        {VanillaBlockTypeIds::CoalOre(), {
+        {VanillaBlockTypeIds::CoalOre(), BlockConfig{
             .name = "煤矿石",
             .similarBlock = {
                 VanillaBlockTypeIds::DeepslateCoalOre()
             }
         }},
-        {VanillaBlockTypeIds::CopperOre(), {
+        {VanillaBlockTypeIds::CopperOre(), BlockConfig{
             .name = "铜矿石",
             .similarBlock = {
                 VanillaBlockTypeIds::DeepslateCopperOre()
             }
         }},
-        {VanillaBlockTypeIds::DiamondOre(), {
+        {VanillaBlockTypeIds::DiamondOre(), BlockConfig{
             .name = "钻石矿石",
             .similarBlock = {
                 VanillaBlockTypeIds::DeepslateDiamondOre()
             }
         }},
-        {VanillaBlockTypeIds::EmeraldOre(), {
+        {VanillaBlockTypeIds::EmeraldOre(), BlockConfig{
             .name = "绿宝石矿石",
             .similarBlock = {
                 VanillaBlockTypeIds::DeepslateEmeraldOre()
             }
         }},
-        {VanillaBlockTypeIds::GoldOre(), {
+        {VanillaBlockTypeIds::GoldOre(), BlockConfig{
             .name = "金矿石",
             .similarBlock = {
                 VanillaBlockTypeIds::DeepslateGoldOre()
             }
         }},
-        {VanillaBlockTypeIds::IronOre(), {
+        {VanillaBlockTypeIds::IronOre(), BlockConfig{
             .name = "铁矿石",
             .similarBlock = {
                 VanillaBlockTypeIds::DeepslateIronOre()
             }
         }},
-        {VanillaBlockTypeIds::LapisOre(), {
+        {VanillaBlockTypeIds::LapisOre(), BlockConfig{
             .name = "青金石矿石",
             .similarBlock = {
                 VanillaBlockTypeIds::DeepslateLapisOre()
             }
         }},
-        {VanillaBlockTypeIds::LitRedstoneOre(), {
+        {VanillaBlockTypeIds::LitRedstoneOre(), BlockConfig{
             .name = "红石矿石",
             .similarBlock = {
                 VanillaBlockTypeIds::LitDeepslateRedstoneOre(),
@@ -121,62 +121,62 @@ bool buildDefaultConfig() {
                 VanillaBlockTypeIds::DeepslateRedstoneOre()
             }
         }},
-        {VanillaBlockTypeIds::NetherGoldOre(), {
+        {VanillaBlockTypeIds::NetherGoldOre(), BlockConfig{
             .name = "下界金矿石",
         }},
-        {VanillaBlockTypeIds::QuartzOre(), {
+        {VanillaBlockTypeIds::QuartzOre(), BlockConfig{
             .name = "下界石英矿石"
         }},
-        {VanillaBlockTypeIds::DeepslateCoalOre(), {
+        {VanillaBlockTypeIds::DeepslateCoalOre(), BlockConfig{
             .name = "深层煤矿石",
             .similarBlock = {
                 VanillaBlockTypeIds::CoalOre()
             }
         }},
-        {VanillaBlockTypeIds::DeepslateCopperOre(), {
+        {VanillaBlockTypeIds::DeepslateCopperOre(), BlockConfig{
             .name = "深层铜矿石",
             .similarBlock = {
                 VanillaBlockTypeIds::CopperOre()
             }
         }},
-        {VanillaBlockTypeIds::DeepslateDiamondOre(), {
+        {VanillaBlockTypeIds::DeepslateDiamondOre(), BlockConfig{
             .name = "深层钻石矿石",
             .similarBlock = {
                 VanillaBlockTypeIds::DiamondOre()
             }
         }},
-        {VanillaBlockTypeIds::DeepslateEmeraldOre(), {
+        {VanillaBlockTypeIds::DeepslateEmeraldOre(), BlockConfig{
             .name = "深层绿宝石矿石",
             .similarBlock = {
                 VanillaBlockTypeIds::EmeraldOre()
             }
         }},
-        {VanillaBlockTypeIds::DeepslateGoldOre(), {
+        {VanillaBlockTypeIds::DeepslateGoldOre(), BlockConfig{
             .name = "深层金矿石",
             .similarBlock = {
                 VanillaBlockTypeIds::GoldOre()
             }
         }},
-        {VanillaBlockTypeIds::DeepslateIronOre(), {
+        {VanillaBlockTypeIds::DeepslateIronOre(), BlockConfig{
             .name = "深层铁矿石",
             .similarBlock = {
                 VanillaBlockTypeIds::IronOre()
             }
         }},
-        {VanillaBlockTypeIds::DeepslateLapisOre(), {
+        {VanillaBlockTypeIds::DeepslateLapisOre(), BlockConfig{
             .name = "深层青金石矿石",
             .similarBlock = {
                 VanillaBlockTypeIds::LapisOre()
             }
         }},
-        {VanillaBlockTypeIds::LitDeepslateRedstoneOre(), {
+        {VanillaBlockTypeIds::LitDeepslateRedstoneOre(), BlockConfig{
             .name = "深层红石矿石",
             .similarBlock = {
                 VanillaBlockTypeIds::LitRedstoneOre(),
                 VanillaBlockTypeIds::RedstoneOre(),
                 VanillaBlockTypeIds::DeepslateRedstoneOre()
             }
-        }},
+        }}
         // clang-format on
     };
     return true;

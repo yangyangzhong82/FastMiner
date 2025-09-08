@@ -19,13 +19,13 @@ bool isEnabled(mce::UUID const& uuid, std::string const& key);
 
 void setEnabled(mce::UUID const& uuid, std::string const& key, bool enabled);
 
-inline void enable(mce::UUID const& uuid, std::string const& key);
+void enable(mce::UUID const& uuid, std::string const& key);
 
-inline void disable(mce::UUID const& uuid, std::string const& key);
+void disable(mce::UUID const& uuid, std::string const& key);
 
-inline bool hasPlayer(mce::UUID const& uuid);
-inline bool hasBlock(mce::UUID const& uuid, std::string const& key);
-inline void removeBlock(mce::UUID const& uuid, std::string const& key);
+bool hasPlayer(mce::UUID const& uuid);
+bool hasBlock(mce::UUID const& uuid, std::string const& key);
+void removeBlock(mce::UUID const& uuid, std::string const& key);
 
 void checkAndTryRemoveNotExistBlock();
 

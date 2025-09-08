@@ -23,13 +23,13 @@ using MinerTools   = std::unordered_set<std::string>; // 工具
 using SimilarBlock = std::unordered_set<std::string>; // 类似方块
 
 struct BlockConfig {
-    std::string   name;                                   // 名称
-    int           cost{0};                                // 经济
-    int           limit{256};                             // 连锁上限
-    DestroyMode   destroyMod{DestroyMode::Default};       // 破坏方式
-    SilkTouchMode silkTouchMod{SilkTouchMode::Unlimited}; // 精准采集
-    MinerTools    tools{};                                // 连锁采集工具
-    SimilarBlock  similarBlock{};                         // 类似方块
+    std::string   name;                                    // 名称
+    int           cost{0};                                 // 经济
+    int           limit{256};                              // 连锁上限
+    DestroyMode   destroyMode{DestroyMode::Default};       // 破坏方式
+    SilkTouchMode silkTouchMode{SilkTouchMode::Unlimited}; // 精准采集
+    MinerTools    tools{};                                 // 连锁采集工具
+    SimilarBlock  similarBlock{};                          // 类似方块
 };
 
 using Blocks = std::unordered_map<std::string, BlockConfig>;
