@@ -97,6 +97,7 @@ void checkAndTryRemoveNotExistBlock() {
             }
         }
     }
+    save();
 }
 
 } // namespace fm::PlayerConfig
