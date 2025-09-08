@@ -21,6 +21,7 @@ bool FastMiner::enable() {
     Config::load();
 
     PlayerConfig::load();
+    PlayerConfig::checkAndTryRemoveNotExistBlock();
 
     EconomySystem::getInstance().initEconomySystem();
 
