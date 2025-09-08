@@ -5,11 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.10.0] - 2025-09-4
+## [0.10.0] - 2025-09-09
 
 ### Changed
 
 - 重构经济系统，将经济组件更改为可选组件
+- 增强管理表单，支持更多配置修改
+- 更新 tooth 格式版本
+
+### Fixed
+
+- 修复部分方块无法连锁 Bug
 
 ## [0.9.0] - 2025-7-16
 

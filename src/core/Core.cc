@@ -140,7 +140,7 @@ void core::registerEvent() {
                     // clang-format off
                     bool const hasSilkTouch = EnchantUtils::hasEnchant(Enchant::Type::SilkTouch, *tool);
 
-                    bool const canDestroyWithAPI =  mc_utils::CanDestroyBlock(*tool,*block) || mc_utils::CanDestroySpecial(*tool,*block);
+                    bool const canDestroyWithAPI =  mc_utils::CanDestroyBlock(*tool,*block) || mc_utils::CanDestroySpecial(*tool,*block) || player->canDestroyBlock(*block);
                     bool const canDestroyWithConfig   = 
                         (confBlock.tools.empty() || confBlock.tools.contains(toolType)) && // 未指定工具、指定工具
                         (
