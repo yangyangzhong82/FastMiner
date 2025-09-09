@@ -75,7 +75,7 @@ void __sendEditSimilarBlock(Player& player, std::string const& typeName) {
     });
     f.appendButton("添加手持方块", "textures/ui/color_plus", "path", [typeName](Player& pl) {
         auto const& item = pl.getSelectedItem();
-        if (item.isNull() || item.isBlock()) {
+        if (item.isNull() || !item.isBlock()) {
             mc_utils::sendText<mc_utils::LogLevel::Error>(pl, "请手持一个方块!");
             return;
         }
