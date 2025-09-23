@@ -6,13 +6,12 @@ add_repositories("liteldev-repo https://github.com/LiteLDev/xmake-repo.git")
 -- add_requires("levilamina develop") to use develop version
 -- please note that you should add bdslibrary yourself if using dev version
 if is_config("target_type", "server") then
-    add_requires("levilamina 1.4.1", {configs = {target_type = "server"}})
+    add_requires("levilamina 1.5.1", {configs = {target_type = "server"}})
 else
     add_requires("levilamina 1.0.0-rc.3", {configs = {target_type = "client"}})
 end
 
 add_requires("levibuildscript")
-add_requires("legacymoney 0.9.0-rc.1")
 add_requires("abseil 20250127.0")
 
 
@@ -43,7 +42,7 @@ target("FastMiner") -- Change this to your mod name.
     add_defines("NOMINMAX", "UNICODE", "PLUGIN_NAME=\"FastMiner\"")
     add_files("src/**.cc")
     add_includedirs("src")
-    add_packages("levilamina", "legacymoney")
+    add_packages("levilamina")
     set_exceptions("none") -- To avoid conflicts with /EHa.
     set_kind("shared")
     set_languages("c++20")
