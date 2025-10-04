@@ -163,7 +163,11 @@ void core::registerEvent() {
                     int maxLimit = confBlock.limit; // 最大挖掘数量
                     if (!hasUnbreakable(tool)) {
                         if (tool->isDamageableItem()) {
-                            maxLimit = std::min(maxLimit, (tool->getMaxDamage() - tool->getDamageValue() - 1));
+                            auto item = tool->getItem();
+                            if (!item) {
+                                return;
+                            }
+                            maxLimit = std::min(maxLimit, (item->mMaxDamage - tool->getDamageValue() - 1));
 
                             if (Config::cfg.economy.enabled && confBlock.cost != 0) {
                                 maxLimit = std::min(
