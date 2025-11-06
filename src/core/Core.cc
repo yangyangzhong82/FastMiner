@@ -21,6 +21,9 @@
 #include <tuple>
 #include <vector>
 
+#include "mc/world/level/BlockSource.h"
+#include "mc/world/level/block/ActorChangeContext.h"
+#include "mc/world/level/block/BlockChangeContext.h"
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
@@ -259,6 +262,11 @@ void core::miner(const int& taskID, const BlockPos stratPos) {
         queue.emplace_back(&bs.getBlock(stratPos), stratPos);
         visited.insert(startHash);
 
+        auto ctx               = BlockChangeContext{};
+        auto actorCtx          = ActorChangeContext{};
+        actorCtx.mActorContext = task.mPlayer;
+        ctx.mContextSource     = std::move(actorCtx);
+
         auto start = std::chrono::high_resolution_clock::now();
         while (task.mCount < task.mLimit && !queue.empty()) {
             auto element = queue.front();
@@ -278,7 +286,7 @@ void core::miner(const int& taskID, const BlockPos stratPos) {
 
                 if (!ev.isCancelled()) {
                     curBlock->playerDestroy(*task.mPlayer, curPos);
-                    bs.removeBlock(curPos);
+                    bs.removeBlock(curPos, ctx);
                     task.mCount++;
                     if (task.mDurabilityLevel == 0
                         || (task.mDurabilityLevel > 0 && randomInt() < (100 / task.mDurabilityLevel + 1))) {
