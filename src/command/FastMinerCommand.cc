@@ -3,23 +3,11 @@
 #include "config/Config.h"
 #include "config/PlayerConfig.h"
 #include "gui/Form.h"
+#include "mod/FastMiner.h"
+
 #include "ll/api/form/CustomForm.h"
 #include "ll/api/form/FormBase.h"
 #include "ll/api/form/SimpleForm.h"
-#include "magic_enum.hpp"
-#include "mc/nbt/ByteTag.h"
-#include "mc/nbt/CompoundTag.h"
-#include "mc/platform/UUID.h"
-#include "mc/world/actor/player/Player.h"
-#include "mc/world/item/Item.h"
-#include "mc/world/item/ItemStack.h"
-#include "mc/world/item/SaveContext.h"
-#include "mc/world/item/SaveContextFactory.h"
-#include "mc/world/level/block/Block.h"
-#include "mod/FastMiner.h"
-#include <cstdint>
-#include <fmt/core.h>
-#include <initializer_list>
 #include <ll/api/command/Command.h>
 #include <ll/api/command/CommandHandle.h>
 #include <ll/api/command/CommandRegistrar.h>
@@ -31,6 +19,24 @@
 #include <ll/api/service/PlayerInfo.h>
 #include <ll/api/service/Service.h>
 #include <ll/api/utils/HashUtils.h>
+
+#include <cstdint>
+#include <fmt/core.h>
+#include <initializer_list>
+#include <sstream>
+#include <string>
+
+#include "magic_enum.hpp"
+
+#include "mc/nbt/ByteTag.h"
+#include "mc/nbt/CompoundTag.h"
+#include "mc/platform/UUID.h"
+#include "mc/world/actor/player/Player.h"
+#include "mc/world/item/Item.h"
+#include "mc/world/item/ItemStack.h"
+#include "mc/world/item/SaveContext.h"
+#include "mc/world/item/SaveContextFactory.h"
+#include "mc/world/level/block/Block.h"
 #include <mc/network/packet/LevelChunkPacket.h>
 #include <mc/network/packet/TextPacket.h>
 #include <mc/server/ServerLevel.h>
@@ -44,8 +50,7 @@
 #include <mc/server/commands/CommandSelector.h>
 #include <mc/world/actor/Actor.h>
 #include <mc/world/actor/player/Player.h>
-#include <sstream>
-#include <string>
+
 
 namespace fm {
 
