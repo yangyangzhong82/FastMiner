@@ -14,7 +14,9 @@
 #include "ll/api/event/EventBus.h"
 #include "ll/api/event/ListenerBase.h"
 #include "ll/api/event/player/PlayerDestroyBlockEvent.h"
+#include "ll/api/event/player/PlayerDisconnectEvent.h"
 #include "ll/api/thread/ServerThreadExecutor.h"
+
 
 #include "mc/world/item/Item.h"
 #include "mc/world/item/ItemStackBase.h"
@@ -37,11 +39,18 @@ namespace fm {
 
 
 MinerLauncher::MinerLauncher() {
-    dispatcher                 = std::make_unique<MinerDispatcher>();
-    playerDestroyBlockListener = ll::event::EventBus::getInstance().emplaceListener<ll::event::PlayerDestroyBlockEvent>(
+    dispatcher = std::make_unique<MinerDispatcher>();
+
+    auto& bus                  = ll::event::EventBus::getInstance();
+    playerDestroyBlockListener = bus.emplaceListener<ll::event::PlayerDestroyBlockEvent>(
         [&](auto& ev) { onPlayerDestroyBlock(ev); },
         ll::event::EventPriority::Low
     );
+    playerDisconnectListener = bus.emplaceListener<ll::event::PlayerDisconnectEvent>([&](auto& ev) {
+        auto& player = ev.self();
+        dispatcher->interruptPlayerTask(player);
+    });
+
     abort = false;
     ll::coro::keepThis([this]() -> ll::coro::CoroTask<> {
         while (!abort) {
@@ -59,6 +68,7 @@ MinerLauncher::~MinerLauncher() {
     abort = true;
     sleep.interrupt(true);
     ll::event::EventBus::getInstance().removeListener(playerDestroyBlockListener);
+    ll::event::EventBus::getInstance().removeListener(playerDisconnectListener);
 }
 
 void MinerLauncher::onPlayerDestroyBlock(ll::event::PlayerDestroyBlockEvent& ev) {

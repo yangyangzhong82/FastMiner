@@ -26,6 +26,7 @@ namespace fm {
 class MinerLauncher final {
     std::unique_ptr<MinerDispatcher> dispatcher; // 调度器
     ll::event::ListenerPtr           playerDestroyBlockListener;
+    ll::event::ListenerPtr           playerDisconnectListener;
     std::atomic<bool>                abort; // 是否需要中止
     ll::coro::InterruptableSleep     sleep; // 中断等待
 
