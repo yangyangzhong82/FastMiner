@@ -54,5 +54,5 @@ target("FastMiner") -- Change this to your mod name.
     end
 
     if is_mode("release") then 
-        add_cxflags("/O2")
+        set_optimize("fastest")
     end 

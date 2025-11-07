@@ -53,7 +53,7 @@ namespace mc_utils {
 }
 
 // IDA: v1.21.0
-[[nodiscard]] inline bool PlayerIsSneaking(Player& player) {
+[[nodiscard]] inline bool isSneaking(Player& player) {
     return SynchedActorDataAccess::getActorFlag(player.getEntityContext(), ActorFlags::Sneaking);
 }
 

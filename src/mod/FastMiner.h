@@ -1,11 +1,13 @@
 #pragma once
-
+#include "core/MinerLauncher.h"
 #include "ll/api/mod/NativeMod.h"
+#include <memory>
 
 namespace fm {
 
-class FastMiner {
+class MinerLauncher;
 
+class FastMiner {
 public:
     static FastMiner& getInstance();
 
@@ -22,7 +24,8 @@ public:
     bool unload();
 
 private:
-    ll::mod::NativeMod& mSelf;
+    ll::mod::NativeMod&            mSelf;
+    std::unique_ptr<MinerLauncher> mLauncher;
 };
 
 } // namespace fm

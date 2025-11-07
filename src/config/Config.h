@@ -34,9 +34,15 @@ struct BlockConfig {
 
 using Blocks = std::unordered_map<std::string, BlockConfig>;
 
-inline constexpr int ConfigVersion = 5;
+inline constexpr int ConfigVersion = 6;
 struct Impl {
-    int           version = ConfigVersion;
+    int version = ConfigVersion;
+
+    struct {
+        int globalBlockLimitPerTick{256}; // 全局每tick方块上限
+        int maxResumeTasksPerTick{16};    // 每tick最大恢复任务数
+    } dispatcher;
+
     EconomyConfig economy; // 经济系统
     Blocks        blocks;  // 方块配置
 };
