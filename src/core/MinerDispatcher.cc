@@ -6,7 +6,16 @@
 namespace fm {
 
 MinerDispatcher::MinerDispatcher() { processingBlocks.reserve(128); }
-MinerDispatcher::~MinerDispatcher() {}
+MinerDispatcher::~MinerDispatcher() {
+    for (auto& [_, task] : tasks_) {
+        task->interrupt();
+    }
+    for (auto& [t, h] : pending_) {
+        t->interrupt();
+        while (!h.done()) h.resume();
+        h.destroy();
+    }
+}
 
 bool MinerDispatcher::canLaunchTask(Player& player) const { return !tasks_.contains(player.getUuid()); }
 
@@ -18,8 +27,8 @@ void MinerDispatcher::launch(MinerTask::Ptr task) {
     task->execute();
 }
 
-void MinerDispatcher::enqueue(MinerTask* task, std::coroutine_handle<> h, ll::coro::ExecutorRef exec) {
-    pending_.push_back({task, h, exec});
+void MinerDispatcher::enqueue(MinerTask* task, std::coroutine_handle<> h) {
+    pending_.push_back({task, h});
 }
 
 void MinerDispatcher::interruptPlayerTask(Player& player) {

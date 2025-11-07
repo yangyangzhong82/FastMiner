@@ -11,7 +11,7 @@ MinerPermitAwaiter::MinerPermitAwaiter(MinerTask* task, MinerDispatcher& dispatc
 
 void MinerPermitAwaiter::await_suspend(std::coroutine_handle<> h) {
     // 将任务和协程句柄交给调度器排队
-    dispatcher.enqueue(task, h, exec);
+    dispatcher.enqueue(task, h);
 }
 
 

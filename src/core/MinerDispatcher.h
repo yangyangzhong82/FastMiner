@@ -2,8 +2,6 @@
 #include "Global.h"
 #include "core/MinerTask.h"
 
-#include "ll/api/coro/Executor.h"
-
 #include "absl/container/flat_hash_map.h"
 #include "mc/platform/UUID.h"
 
@@ -40,7 +38,7 @@ public:
 
     void launch(MinerTask::Ptr task);
 
-    void enqueue(MinerTask* task, std::coroutine_handle<> h, ll::coro::ExecutorRef exec);
+    void enqueue(MinerTask* task, std::coroutine_handle<> h);
 
     void interruptPlayerTask(Player& player);
 
@@ -54,7 +52,6 @@ private:
     struct Pending {
         MinerTask*              task;
         std::coroutine_handle<> h;
-        ll::coro::ExecutorRef   exec;
     };
     std::vector<Pending> pending_; // 等待执行的任务
 };
