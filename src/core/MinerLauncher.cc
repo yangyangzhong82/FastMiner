@@ -128,7 +128,10 @@ bool MinerLauncher::isEnableMiner(Player& player, std::string const& blockType) 
 }
 
 void MinerLauncher::prepareTask(MinerTaskContext ctx) {
-    if (!ctx.block.isAir()) {
+    // 不知道为什么 MoJang 的 Block const& 指向的对象居然不是同一个，这里需要更新一下
+    auto unConst = const_cast<Block*>(&ctx.block);
+    unConst      = const_cast<Block*>(&ctx.blockSource.getBlock(ctx.tiggerPos));
+    if (!unConst->isAir()) {
         FM_TRACE("block is not air");
         return; // 方块不是空气代表着玩家没有破坏它
     }
