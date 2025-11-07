@@ -154,7 +154,7 @@ void MinerTask::tryBreakBlock(QueueItem const& item, ll::event::EventBus& bus, B
     block.playerDestroy(player, pos);
     // blockSource.removeBlock(pos, ctx);
     static auto& air = BlockTypeRegistry::get().getDefaultBlockState("minecraft:air");
-    blockSource.setBlock(pos, air, 0, nullptr, ctx);
+    blockSource.setBlock(pos, air, 2, nullptr, ctx);
 }
 
 
@@ -196,8 +196,20 @@ void MinerTask::notifyFinished(long long cpuTime) {
         auto cost = blockConfig.cost * (count - 1);
         EconomySystem::getInstance()->reduce(player, cost);
         mc_utils::sendText(player, "本次连锁了 {} 个方块, 消耗了 {} 点耐久, 总耗时 {}ms", count, deductDamage, ms);
+        notifyClientBlockUpdate();
         state = State::Finished;
         dispatcher.onTaskFinished(this);
+        co_return;
+    }).launch(ll::thread::ServerThreadExecutor::getDefault());
+}
+
+void MinerTask::notifyClientBlockUpdate() {
+    // 任务已完成，可以把资源转移走
+    ll::coro::keepThis([queue = std::move(queue), &bs = blockSource]() -> ll::coro::CoroTask<> {
+        co_await ll::chrono::ticks{1};
+        for (auto const& [block, pos, _] : queue) {
+            block.neighborChanged(bs, pos, pos);
+        }
         co_return;
     }).launch(ll::thread::ServerThreadExecutor::getDefault());
 }

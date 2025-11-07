@@ -77,6 +77,7 @@ struct MinerTask {
     void calculateDurabilityDeduction();
     void serachAdjacentBlocks(BlockPos const& pos);
     void notifyFinished(long long cpuTime);
+    void notifyClientBlockUpdate(); // 通知客户端方块更新
 
     void interrupt();
     bool isInterrupted() const;
