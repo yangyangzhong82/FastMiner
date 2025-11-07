@@ -120,9 +120,11 @@ void MinerLauncher::onPlayerDestroyBlock(ll::event::PlayerDestroyBlockEvent& ev)
 
 
 bool MinerLauncher::isEnableMiner(Player& player, std::string const& blockType) const {
-    auto& uuid = player.getUuid();
+    auto& uuid             = player.getUuid();
+    bool  sneakingRequired = PlayerConfig::isEnabled(uuid, PlayerConfig::KEY_SNEAK);
+    bool  sneaking         = mc_utils::isSneaking(player);
     return PlayerConfig::isEnabled(uuid, PlayerConfig::KEY_ENABLE) && PlayerConfig::isEnabled(uuid, blockType)
-        && (PlayerConfig::isEnabled(uuid, PlayerConfig::KEY_SNEAK) && mc_utils::isSneaking(player));
+        && (!sneakingRequired || sneaking); // 如果要求下蹲，则必须下蹲；否则忽略
 }
 
 void MinerLauncher::prepareTask(MinerTaskContext ctx) {
