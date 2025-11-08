@@ -90,7 +90,7 @@ void checkAndTryRemoveNotExistBlock() {
         auto iter = bls.begin();
         while (iter != bls.end()) {
             auto const& key = iter->first;
-            if (blocks.find(key) == blocks.end()) {
+            if (blocks.find(key) == blocks.end() && key != KEY_ENABLE && key != KEY_SNEAK) {
                 iter = bls.erase(iter);
             } else {
                 ++iter;
