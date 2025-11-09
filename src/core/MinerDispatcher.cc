@@ -27,16 +27,14 @@ void MinerDispatcher::launch(MinerTask::Ptr task) {
     task->execute();
 }
 
-void MinerDispatcher::enqueue(MinerTask* task, std::coroutine_handle<> h) {
-    pending_.push_back({task, h});
-}
+void MinerDispatcher::enqueue(MinerTask* task, std::coroutine_handle<> h) { pending_.push_back({task, h}); }
 
 void MinerDispatcher::interruptPlayerTask(Player& player) {
     auto iter = tasks_.find(player.getUuid());
     if (iter != tasks_.end()) {
         iter->second->interrupt();
+        tasks_.erase(iter);
     }
-    tasks_.erase(iter);
 }
 
 void MinerDispatcher::onTaskFinished(MinerTask* task) { tasks_.erase(task->player.getUuid()); }
