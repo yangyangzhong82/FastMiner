@@ -7,7 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0-rc.2] - 2025-11-09
+
 - 修复玩家连锁开关在启动时总被设置为关闭的 Bug
+- 修复玩家断开连接时中断任务引发的 SEH 异常
 
 ## [0.13.0-rc.1] - 2025-11-06
 
