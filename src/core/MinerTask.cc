@@ -12,6 +12,7 @@
 #include "ll/api/event/EventBus.h"
 #include "ll/api/event/player/PlayerDestroyBlockEvent.h"
 #include "ll/api/thread/ServerThreadExecutor.h"
+#include "ll/api/utils/RandomUtils.h"
 
 #include "mc/server/ServerLevel.h"
 #include "mc/world/actor/player/Player.h"
@@ -163,8 +164,9 @@ void MinerTask::calculateDurabilityDeduction() {
         deductDamage = count; // 无耐久附魔，按照破坏数量扣除耐久
     } else {
         // TODO: 分离到其它线程进行计算?
+        int r = 100 / (durability + 1);
         for (int i = 0; i < count; ++i) {
-            if (MinerUtil::randomInt(0, 99) < 100 / (durability + 1)) deductDamage++;
+            if (ll::random_utils::rand<int>(0, 99) < r) deductDamage++;
         }
     }
 }
@@ -172,7 +174,7 @@ void MinerTask::calculateDurabilityDeduction() {
 void MinerTask::serachAdjacentBlocks(BlockPos const& pos) {
     for (auto const& [dx, dy, dz] : directions) {
         BlockPos adjacent{pos.x + dx, pos.y + dy, pos.z + dz};
-        auto     hashed = MinerUtil::hashDimensionPosition(adjacent, dimension);
+        auto     hashed = miner_util::hashDimensionPosition(adjacent, dimension);
         if (visited.insert(hashed).second) {
             auto& block = blockSource.getBlock(adjacent);
             auto& type  = block.getTypeName();
@@ -188,7 +190,7 @@ void MinerTask::notifyFinished(long long cpuTime) {
     ll::coro::keepThis([this, ms = std::move(cpuTime)]() -> ll::coro::CoroTask<> {
         co_await ll::chrono::ticks{1};
         calculateDurabilityDeduction();
-        if (!MinerUtil::hasUnbreakable(tool)) {
+        if (!miner_util::hasUnbreakable(tool)) {
             short damage = tool.getDamageValue() + deductDamage;
             tool.setDamageValue(damage);
             player.refreshInventory();

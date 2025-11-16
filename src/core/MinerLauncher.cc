@@ -76,7 +76,7 @@ void MinerLauncher::onPlayerDestroyBlock(ll::event::PlayerDestroyBlockEvent& ev)
     auto& player = ev.self();
     auto  dimId  = player.getDimensionId();
 
-    auto hashedPos = MinerUtil::hashDimensionPosition(rawPos, dimId);
+    auto hashedPos = miner_util::hashDimensionPosition(rawPos, dimId);
     if (ev.isCancelled() || dispatcher->isProcessing(hashedPos)) {
         FM_TRACE("event cancelled or processing");
         return; // 已处理 / 正在处理
@@ -149,7 +149,7 @@ void MinerLauncher::prepareTask(MinerTaskContext ctx) {
 
     int& limit = ctx.limit;
     limit      = ctx.blockConfig.limit;
-    if (!MinerUtil::hasUnbreakable(itemStack) && itemStack.isDamageableItem()) {
+    if (!miner_util::hasUnbreakable(itemStack) && itemStack.isDamageableItem()) {
         auto item = itemStack.getItem();
         if (!item) {
             FM_TRACE("item is null");
