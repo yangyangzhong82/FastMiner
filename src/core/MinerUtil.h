@@ -27,17 +27,16 @@ inline bool hasUnbreakable(ItemStack const& item) {
     static constexpr std::string_view unbreakable = "Unbreakable";
 
     auto& nbt = item.mUserData;
-    if (!nbt->contains("tag")) {
+    if (!nbt) {
         return false;
     }
-    auto& tag = (*nbt)["tag"];
-    if (tag.contains(unbreakable)) {
-        return tag[unbreakable].get<ByteTag>();
+    if (nbt->contains(unbreakable)) {
+        return (*nbt)[unbreakable].get<ByteTag>();
     }
     return false;
 }
 
-} // namespace MinerUtil
+} // namespace miner_util
 
 
 } // namespace fm
