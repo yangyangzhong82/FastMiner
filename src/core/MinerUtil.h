@@ -15,7 +15,7 @@ using HashedDimPos = size_t; // Hashed dimension position
 
 namespace miner_util {
 
-inline HashedDimPos hashDimensionPosition(BlockPos const& pos, int const& dim) {
+inline HashedDimPos hashDimensionPosition(BlockPos const& pos, int dim) {
     constexpr size_t prime1 = 73856093;
     constexpr size_t prime2 = 19349663;
     constexpr size_t prime3 = 83492791;

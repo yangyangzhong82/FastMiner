@@ -47,8 +47,7 @@ void __sendEditBlockTools(Player& player, std::string const& typeName) {
             mc_utils::sendText<mc_utils::LogLevel::Error>(pl, "请手持一个工具!");
             return;
         }
-        Config::cfg.blocks[typeName].tools.emplace(item.getTypeName());
-        Config::save();
+        Config::dynamicAddTool(typeName, item.getTypeName());
         __sendEditBlockTools(pl, typeName);
     });
     f.appendDivider();
@@ -57,8 +56,7 @@ void __sendEditBlockTools(Player& player, std::string const& typeName) {
         f.appendButton(
             fmt::format("{}\n点击移除工具", item.isNull() ? tool : item.getName()),
             [tool, typeName]([[maybe_unused]] Player& pl) {
-                Config::cfg.blocks[typeName].tools.erase(tool);
-                Config::save();
+                Config::dynamicRemoveTool(typeName, tool);
                 __sendEditBlockTools(pl, typeName);
             }
         );
@@ -79,8 +77,7 @@ void __sendEditSimilarBlock(Player& player, std::string const& typeName) {
             mc_utils::sendText<mc_utils::LogLevel::Error>(pl, "请手持一个方块!");
             return;
         }
-        Config::cfg.blocks[typeName].similarBlock.emplace(item.mBlock->getTypeName());
-        Config::save();
+        Config::dynamicAddSimilarBlock(typeName, item.mBlock->getTypeName());
         __sendEditSimilarBlock(pl, typeName);
     });
     f.appendDivider();
@@ -89,8 +86,7 @@ void __sendEditSimilarBlock(Player& player, std::string const& typeName) {
         f.appendButton(
             fmt::format("{}\n点击移除方块", item.isNull() && !item.isBlock() ? similar : item.getName()),
             [similar, typeName]([[maybe_unused]] Player& pl) {
-                Config::cfg.blocks[typeName].similarBlock.erase(similar);
-                Config::save();
+                Config::dynamicRemoveSimilarBlock(typeName, similar);
                 __sendEditSimilarBlock(pl, typeName);
             }
         );
@@ -120,11 +116,7 @@ void _sendEditBlockConfig(Player& player, std::string const& typeName) {
             Config::DestroyMode   dmod     = DestroyModeMap.at(std::get<std::string>(res->at("destroyMode")));
             Config::SilkTouchMode smod     = SilkTouchMap.at(std::get<std::string>(res->at("silkTouchMode")));
 
-            Config::cfg.blocks[typeName] = Config::BlockConfig{name, cost, limit, dmod, smod};
-            if (last != typeName) {
-                Config::cfg.blocks.erase(last);
-            }
-            Config::save();
+            Config::dynamicUpdateBlockConfig(last, typeName, {name, cost, limit, dmod, smod});
             _sendBlockViewer(pl, typeName);
         } catch (...) {}
     });
@@ -142,7 +134,7 @@ void _addHandheldItemBlock(Player& player) {
     }
     auto block = item.mBlock;
 
-    Config::cfg.blocks[block->getTypeName()] = {.name = item.getName()};
+    Config::dynamicAddBlockConfig(block->getTypeName(), {.name = item.getName()});
     _sendEditBlockConfig(player, block->getTypeName());
 }
 
@@ -175,9 +167,8 @@ void _sendBlockViewer(Player& player, std::string const& typeName) {
             "textures/ui/icon_trash",
             "path",
             [typeName](Player& pl) {
-                Config::cfg.blocks.erase(typeName);
+                Config::dynamicRemoveBlockConfig(typeName);
                 PlayerConfig::removeBlock(pl.getUuid(), typeName);
-                Config::save();
                 PlayerConfig::save();
                 sendOpBlockManager(pl);
             }

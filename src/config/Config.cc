@@ -1,18 +1,59 @@
 #include "config/Config.h"
 #include "ll/api/Config.h"
 #include "mod/FastMiner.h"
-#include <filesystem>
 
 #include "mc/deps/core/string/HashedString.h"
-
 #include "mc/world/item/VanillaItemNames.h"
-
+#include "mc/world/level/block/Block.h"
 #include "mc/world/level/block/VanillaBlockTypeIds.h"
+#include "mc/world/level/block/registry/BlockTypeRegistry.h"
+
+#include <filesystem>
+#include <utility>
 
 namespace fm::Config {
 
-bool buildDefaultConfig() {
-    MinecraftAxeTools = {
+using RuntimeConfigMap = absl::flat_hash_map<short, RuntimeBlockConfig::Ptr>;
+inline RuntimeConfigMap runtimeConfigMap;
+
+short getBlockIdCached(std::string const& blockType) {
+    static absl::flat_hash_map<std::string, short> cache;
+
+    auto iter = cache.find(blockType);
+    if (iter == cache.end()) {
+        auto blockId = BlockTypeRegistry::get().getDefaultBlockState(blockType.c_str()).getBlockItemId();
+
+        iter = cache.emplace(blockType, blockId).first;
+    }
+    return iter->second;
+}
+RuntimeBlockConfig::Ptr getRuntimeBlockConfig(short blockId) {
+    auto iter = runtimeConfigMap.find(blockId);
+    if (iter == runtimeConfigMap.end()) {
+        return nullptr;
+    }
+    return iter->second;
+}
+RuntimeBlockConfig::Ptr getRuntimeBlockConfig(std::string const& blockType) {
+    return getRuntimeBlockConfig(getBlockIdCached(blockType));
+}
+RuntimeBlockConfig::Ptr _buildRuntimeBlockConfig(BlockConfig const& config) {
+    auto rtConfig = std::make_shared<RuntimeBlockConfig>(config);
+    rtConfig->similarBlock_.reserve(config.similarBlock.size());
+    for (auto const& similar : config.similarBlock) {
+        rtConfig->similarBlock_.insert(getBlockIdCached(similar));
+    }
+    return rtConfig;
+}
+void _buildRuntimeConfigMap() {
+    runtimeConfigMap.clear();
+    for (auto const& [key, value] : cfg.blocks) {
+        auto blockId = getBlockIdCached(key);
+        runtimeConfigMap.emplace(blockId, std::move(_buildRuntimeBlockConfig(value)));
+    }
+}
+void _buildDefaultConfig() {
+    std::unordered_set<std::string> MinecraftAxeTools = {
         VanillaItemNames::WoodenAxe(),
         VanillaItemNames::StoneAxe(),
         VanillaItemNames::IronAxe(),
@@ -179,27 +220,97 @@ bool buildDefaultConfig() {
         }}
         // clang-format on
     };
-    return true;
 }
 
 void load() {
+    _buildDefaultConfig();
+
     auto path = FastMiner::getInstance().getSelf().getModDir() / "Config.json";
-
-    if (!std::filesystem::exists(path)) {
-        save();
-        return;
-    }
-
-    bool ok = ll::config::loadConfig(cfg, path);
-    if (!ok) {
+    if (!std::filesystem::exists(path) || !ll::config::loadConfig(cfg, path)) {
         save();
     }
+
+    _buildRuntimeConfigMap();
 }
 
 void save() {
     auto path = FastMiner::getInstance().getSelf().getModDir() / "Config.json";
-
     ll::config::saveConfig(cfg, path);
+}
+
+void dynamicAddTool(std::string const& blockType, std::string const& toolType) {
+    auto iter = cfg.blocks.find(blockType);
+    if (iter != cfg.blocks.end()) {
+        iter->second.tools.insert(toolType);
+        save();
+    }
+}
+void dynamicRemoveTool(std::string const& blockType, std::string const& toolType) {
+    auto iter = cfg.blocks.find(blockType);
+    if (iter != cfg.blocks.end()) {
+        iter->second.tools.erase(toolType);
+        save();
+    }
+}
+void dynamicAddSimilarBlock(std::string const& blockType, std::string const& similarBlockType) {
+    auto iter = cfg.blocks.find(blockType);
+    if (iter == cfg.blocks.end()) {
+        return;
+    }
+    if (iter->second.similarBlock.insert(similarBlockType).second) {
+        save();
+        if (auto ptr = getRuntimeBlockConfig(blockType)) {
+            ptr->similarBlock_.insert(getBlockIdCached(similarBlockType));
+        }
+    }
+}
+void dynamicRemoveSimilarBlock(std::string const& blockType, std::string const& similarBlockType) {
+    auto iter = cfg.blocks.find(blockType);
+    if (iter == cfg.blocks.end()) {
+        return;
+    }
+    if (iter->second.similarBlock.erase(similarBlockType)) {
+        save();
+        if (auto ptr = getRuntimeBlockConfig(blockType)) {
+            ptr->similarBlock_.erase(getBlockIdCached(similarBlockType));
+        }
+    }
+}
+void dynamicUpdateBlockConfig(std::string const& oldType, std::string const& newType, BlockConfig config) {
+    if (oldType == newType) {
+        auto iter = cfg.blocks.find(oldType);
+        if (iter == cfg.blocks.end()) {
+            return;
+        }
+        iter->second = std::move(config);
+        save();
+
+        if (auto ptr = getRuntimeBlockConfig(oldType)) {
+            ptr->rawConfig_ = iter->second;
+        }
+        return;
+    }
+
+    dynamicRemoveBlockConfig(oldType);
+    dynamicAddBlockConfig(newType, std::move(config));
+}
+void dynamicAddBlockConfig(std::string const& blockType, BlockConfig config) {
+    auto result = cfg.blocks.emplace(blockType, std::move(config));
+    if (result.second) {
+        save();
+        if (auto ptr = _buildRuntimeBlockConfig(result.first->second)) {
+            runtimeConfigMap.emplace(getBlockIdCached(blockType), ptr);
+        }
+    }
+}
+void dynamicRemoveBlockConfig(std::string const& blockType) {
+    auto iter = cfg.blocks.find(blockType);
+    if (iter == cfg.blocks.end()) {
+        return;
+    }
+    cfg.blocks.erase(iter); // 擦除旧元素
+    save();
+    runtimeConfigMap.erase(getBlockIdCached(blockType));
 }
 
 

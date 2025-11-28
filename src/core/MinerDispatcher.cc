@@ -20,10 +20,10 @@ MinerDispatcher::~MinerDispatcher() {
 bool MinerDispatcher::canLaunchTask(Player& player) const { return !tasks_.contains(player.getUuid()); }
 
 void MinerDispatcher::launch(MinerTask::Ptr task) {
-    if (!canLaunchTask(task->player)) {
+    if (!canLaunchTask(task->player_)) {
         throw std::runtime_error("Player already has a task running");
     }
-    tasks_.emplace(task->player.getUuid(), task);
+    tasks_.emplace(task->player_.getUuid(), task);
     task->execute();
 }
 
@@ -37,7 +37,7 @@ void MinerDispatcher::interruptPlayerTask(Player& player) {
     }
 }
 
-void MinerDispatcher::onTaskFinished(MinerTask* task) { tasks_.erase(task->player.getUuid()); }
+void MinerDispatcher::onTaskFinished(MinerTask* task) { tasks_.erase(task->player_.getUuid()); }
 
 void MinerDispatcher::tick() {
     if (tasks_.empty()) return;
@@ -54,7 +54,7 @@ void MinerDispatcher::tick() {
         auto& p = pending_[i];
         if (p.task->canContinue()) {
             // 分配额度并恢复协程
-            p.task->quota += quotaPerTask;
+            p.task->quota_ += quotaPerTask;
             p.h.resume();
         }
         resumed++;

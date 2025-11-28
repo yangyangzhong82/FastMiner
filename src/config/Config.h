@@ -1,9 +1,13 @@
 #pragma once
 #include "economy/EconomyConfig.h"
+
+#include "absl/container/flat_hash_map.h"
+#include "absl/container/flat_hash_set.h"
+
 #include <sys/stat.h>
 #include <unordered_map>
 #include <unordered_set>
-
+#include <utility>
 
 namespace fm::Config {
 
@@ -49,13 +53,36 @@ struct Impl {
 
 inline Impl cfg;
 
-inline std::unordered_set<std::string> MinecraftAxeTools;
+// Performance Optimization
+struct RuntimeBlockConfig {
+    using Ptr = std::shared_ptr<RuntimeBlockConfig>;
 
-bool buildDefaultConfig();
+    BlockConfig                rawConfig_;
+    absl::flat_hash_set<short> similarBlock_{};
+    explicit RuntimeBlockConfig(BlockConfig config) : rawConfig_(std::move(config)) {}
+};
+
+short                   getBlockIdCached(std::string const& blockType);
+RuntimeBlockConfig::Ptr getRuntimeBlockConfig(short blockId);
+RuntimeBlockConfig::Ptr getRuntimeBlockConfig(std::string const& blockType);
+
+RuntimeBlockConfig::Ptr _buildRuntimeBlockConfig(BlockConfig const& config);
+void                    _buildRuntimeConfigMap();
+void                    _buildDefaultConfig();
 
 void load();
 
 void save();
 
+// GUI helper
+void dynamicAddTool(std::string const& blockType, std::string const& toolType);
+void dynamicRemoveTool(std::string const& blockType, std::string const& toolType);
+
+void dynamicAddSimilarBlock(std::string const& blockType, std::string const& similarBlockType);
+void dynamicRemoveSimilarBlock(std::string const& blockType, std::string const& similarBlockType);
+
+void dynamicUpdateBlockConfig(std::string const& oldType, std::string const& newType, BlockConfig config);
+void dynamicAddBlockConfig(std::string const& blockType, BlockConfig config);
+void dynamicRemoveBlockConfig(std::string const& blockType);
 
 } // namespace fm::Config

@@ -32,7 +32,7 @@
 namespace fm {
 
 
-inline static std::vector<std::tuple<int, int, int>> AdjacentDirections = {
+inline static std::vector<MinerTask::Direction> AdjacentDirections = {
     {1,  0,  0 },
     {-1, 0,  0 },
     {0,  1,  0 },
@@ -41,7 +41,7 @@ inline static std::vector<std::tuple<int, int, int>> AdjacentDirections = {
     {0,  0,  -1}
 };
 
-inline static std::vector<std::tuple<int, int, int>> CubeDirections = {
+inline static std::vector<MinerTask::Direction> CubeDirections = {
     {1,  0,  0 },
     {-1, 0,  0 },
     {0,  1,  0 },
@@ -71,44 +71,40 @@ inline static std::vector<std::tuple<int, int, int>> CubeDirections = {
 };
 
 
-static TaskID next = 0;
-
 MinerTask::MinerTask(MinerTaskContext ctx, MinerDispatcher& dispatcher)
-: id(next++),
-  player(ctx.player),
-  tool(const_cast<ItemStack&>(player.getSelectedItem())),
-  startBlock(ctx.block),
-  startPosition(std::move(ctx.tiggerPos)),
-  hashedStartPos(std::move(ctx.hashedPos)),
-  blockType(startBlock.getTypeName()),
-  blockConfig(ctx.blockConfig),
-  blockSource(ctx.blockSource),
-  limit(std::move(ctx.limit)),
-  dimension(std::move(ctx.tiggerDimid)),
-  durability(EnchantUtils::getEnchantLevel(::Enchant::Type::Unbreaking, tool)),
-  directions(blockConfig.destroyMode == Config::DestroyMode::Cube ? CubeDirections : AdjacentDirections),
-  dispatcher(dispatcher) {}
+: player_(ctx.player),
+  tool_(const_cast<ItemStack&>(player_.getSelectedItem())),
+  blockId_(ctx.blockId),
+  startPos_(std::move(ctx.tiggerPos)),
+  hashedStartPos_(std::move(ctx.hashedPos)),
+  blockConfig_(std::move(ctx.rtConfig)),
+  blockSource_(ctx.blockSource),
+  limit_(std::move(ctx.limit)),
+  dimension_(std::move(ctx.tiggerDimid)),
+  durability_(EnchantUtils::getEnchantLevel(::Enchant::Type::Unbreaking, tool_)),
+  blockChangeCtx_(ActorChangeContext{&player_}),
+  eventBus_(ll::event::EventBus::getInstance()),
+  directions_(blockConfig_->rawConfig_.destroyMode == Config::DestroyMode::Cube ? CubeDirections : AdjacentDirections),
+  dispatcher_(dispatcher) {}
 
 void MinerTask::execute() {
-    queue.reserve(limit);
-    visited.reserve(limit * 2);
+    queue_.reserve(limit_);
+    visited_.reserve(limit_ * 2);
 
-    queue.emplace_back(startBlock, startPosition, hashedStartPos);
-    visited.insert(hashedStartPos);
-    state = State::Running;
+    state_ = State::Running;
     ll::coro::keepThis([this]() -> ll::coro::CoroTask<> {
-        auto& bus = ll::event::EventBus::getInstance();
-
-        auto awaiter       = MinerPermitAwaiter{this, dispatcher};
-        auto ctx           = BlockChangeContext{};
-        ctx.mContextSource = ActorChangeContext{.mActorContext = &player};
+        auto awaiter = MinerPermitAwaiter{this, dispatcher_};
 
         auto totalCpuTime = std::chrono::milliseconds::zero(); // 总 CPU 耗时
         auto begin        = std::chrono::high_resolution_clock::now();
 
+        queue_.emplace_back(startPos_, hashedStartPos_);
+        visited_.insert(hashedStartPos_);
+        count_++; // 任务启动时玩家自己破坏方块也算一次(任务对齐)
+
         size_t head = 0; // 队列头
-        while (count < limit && head < queue.size() && canContinue()) {
-            if (quota == 0) {
+        while (count_ < limit_ && head < queue_.size() && canContinue()) {
+            if (quota_ == 0) {
                 auto end      = std::chrono::high_resolution_clock::now();
                 totalCpuTime += std::chrono::duration_cast<std::chrono::milliseconds>(end - begin);
                 co_await awaiter;                                  // 等待许可额度
@@ -117,12 +113,11 @@ void MinerTask::execute() {
             }
 
             // 消费许可额度
-            while (quota > 0 && canContinue()) {
-                quota--;
-                auto const& item            = queue[head++];
-                auto const& [block, pos, _] = item;
-                tryBreakBlock(item, bus, ctx);
-                serachAdjacentBlocks(pos);
+            while (quota_ > 0 && count_ < limit_ && canContinue()) {
+                quota_--;
+                auto const& element = queue_[head++];
+                tryBreakBlock(element);
+                searchAdjacentBlocks(element);
             }
         }
         auto end      = std::chrono::high_resolution_clock::now();
@@ -136,51 +131,54 @@ void MinerTask::execute() {
     }).launch(ll::thread::ServerThreadExecutor::getDefault());
 }
 
-void MinerTask::tryBreakBlock(QueueItem const& item, ll::event::EventBus& bus, BlockChangeContext ctx) {
-    auto const& [block, pos, hashed] = item;
+void MinerTask::tryBreakBlock(QueueElement const& element) {
+    auto const& [pos, hashed] = element;
+
+    auto const& block = blockSource_.getBlock(pos);
     if (block.isAir()) {
         return;
     }
-    dispatcher.insertProcessing(hashed);
 
-    auto event = ll::event::PlayerDestroyBlockEvent{player, pos};
-    bus.publish(event);
+    dispatcher_.insertProcessing(hashed);
 
-    dispatcher.eraseProcessing(hashed);
+    auto event = ll::event::PlayerDestroyBlockEvent{player_, pos};
+    eventBus_.publish(event);
+
+    dispatcher_.eraseProcessing(hashed);
     if (event.isCancelled()) {
         return;
     }
 
-    count++; // 累计破坏方块数量
-    block.playerDestroy(player, pos);
+    count_++; // 累计破坏方块数量
+    block.playerDestroy(player_, pos);
     // blockSource.removeBlock(pos, ctx);
     static auto& air = BlockTypeRegistry::get().getDefaultBlockState("minecraft:air");
-    blockSource.setBlock(pos, air, 2, nullptr, ctx);
+    blockSource_.setBlock(pos, air, 2, nullptr, blockChangeCtx_);
 }
 
 
 void MinerTask::calculateDurabilityDeduction() {
-    if (durability == 0) {
-        deductDamage = count; // 无耐久附魔，按照破坏数量扣除耐久
+    if (durability_ == 0) {
+        deductDamage_ = count_; // 无耐久附魔，按照破坏数量扣除耐久
     } else {
         // TODO: 分离到其它线程进行计算?
-        int r = 100 / (durability + 1);
-        for (int i = 0; i < count; ++i) {
-            if (ll::random_utils::rand<int>(0, 99) < r) deductDamage++;
+        int r = 100 / (durability_ + 1);
+        for (int i = 0; i < count_; ++i) {
+            if (ll::random_utils::rand<int>(0, 99) < r) deductDamage_++;
         }
     }
 }
 
-void MinerTask::serachAdjacentBlocks(BlockPos const& pos) {
-    for (auto const& [dx, dy, dz] : directions) {
+void MinerTask::searchAdjacentBlocks(QueueElement const& element) {
+    auto const& pos = element.blockPos;
+    for (auto [dx, dy, dz] : directions_) {
         BlockPos adjacent{pos.x + dx, pos.y + dy, pos.z + dz};
-        auto     hashed = miner_util::hashDimensionPosition(adjacent, dimension);
-        if (visited.insert(hashed).second) {
-            auto& block = blockSource.getBlock(adjacent);
-            auto& type  = block.getTypeName();
-            // TODO: 哈希优化 similarBlock 查找
-            if (block == startBlock || blockConfig.similarBlock.contains(type)) {
-                queue.emplace_back(block, std::move(adjacent), std::move(hashed));
+        auto     hashed = miner_util::hashDimensionPosition(adjacent, dimension_);
+        if (visited_.insert(hashed).second) {
+            auto const& block = blockSource_.getBlock(adjacent);
+            auto const  id    = block.getBlockItemId();
+            if (id == blockId_ || blockConfig_->similarBlock_.contains(id)) {
+                queue_.emplace_back(std::move(adjacent), std::move(hashed)); // 加入搜索队列
             }
         }
     }
@@ -190,37 +188,37 @@ void MinerTask::notifyFinished(long long cpuTime) {
     ll::coro::keepThis([this, ms = std::move(cpuTime)]() -> ll::coro::CoroTask<> {
         co_await ll::chrono::ticks{1};
         calculateDurabilityDeduction();
-        if (!miner_util::hasUnbreakable(tool)) {
-            short damage = tool.getDamageValue() + deductDamage;
-            tool.setDamageValue(damage);
-            player.refreshInventory();
+        if (!miner_util::hasUnbreakable(tool_)) {
+            short damage = tool_.getDamageValue() + deductDamage_;
+            tool_.setDamageValue(damage);
+            player_.refreshInventory();
         }
-        auto cost = blockConfig.cost * (count - 1);
-        EconomySystem::getInstance()->reduce(player, cost);
-        mc_utils::sendText(player, "本次连锁了 {} 个方块, 消耗了 {} 点耐久, 总耗时 {}ms", count, deductDamage, ms);
+        auto cost = blockConfig_->rawConfig_.cost * (count_ - 1);
+        EconomySystem::getInstance()->reduce(player_, cost);
+        mc_utils::sendText(player_, "本次连锁了 {} 个方块, 消耗了 {} 点耐久, 总耗时 {}ms", count_, deductDamage_, ms);
         notifyClientBlockUpdate();
-        state = State::Finished;
-        dispatcher.onTaskFinished(this);
+        state_ = State::Finished;
+        dispatcher_.onTaskFinished(this);
         co_return;
     }).launch(ll::thread::ServerThreadExecutor::getDefault());
 }
 
 void MinerTask::notifyClientBlockUpdate() {
     // 任务已完成，可以把资源转移走
-    ll::coro::keepThis([queue = std::move(queue), &bs = blockSource]() -> ll::coro::CoroTask<> {
+    ll::coro::keepThis([queue = std::move(queue_), &bs = blockSource_]() -> ll::coro::CoroTask<> {
         co_await ll::chrono::ticks{1};
-        for (auto const& [block, pos, _] : queue) {
-            block.neighborChanged(bs, pos, pos);
+        for (auto const& [pos, _] : queue) {
+            bs.neighborChanged(pos, pos);
         }
         co_return;
     }).launch(ll::thread::ServerThreadExecutor::getDefault());
 }
 
-void MinerTask::interrupt() { state = State::Interrupted; }
-bool MinerTask::isInterrupted() const { return state == State::Interrupted; }
-bool MinerTask::isFinished() const { return state == State::Finished; }
-bool MinerTask::isRunning() const { return state == State::Running; }
-bool MinerTask::isPending() const { return state == State::Pending; }
-bool MinerTask::canContinue() const { return state == State::Running || state == State::Pending; }
+void MinerTask::interrupt() { state_ = State::Interrupted; }
+bool MinerTask::isInterrupted() const { return state_ == State::Interrupted; }
+bool MinerTask::isFinished() const { return state_ == State::Finished; }
+bool MinerTask::isRunning() const { return state_ == State::Running; }
+bool MinerTask::isPending() const { return state_ == State::Pending; }
+bool MinerTask::canContinue() const { return state_ == State::Running || state_ == State::Pending; }
 
 } // namespace fm

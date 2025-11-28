@@ -42,7 +42,7 @@ public:
     void prepareTask(MinerTaskContext ctx);
 
     bool canDestroyBlockWithMcApi(Player& player, Block const& block) const;
-    bool canDestroyBlockWithConfig(Player& player, Config::BlockConfig const& config) const;
+    static bool canDestroyBlockWithConfig(Player& player, Config::RuntimeBlockConfig::Ptr const& rtConfig);
 };
 
 

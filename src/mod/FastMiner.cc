@@ -17,7 +17,6 @@ FastMiner& FastMiner::getInstance() {
 bool FastMiner::load() { return true; }
 
 bool FastMiner::enable() {
-    Config::buildDefaultConfig();
     Config::load();
 
     PlayerConfig::load();

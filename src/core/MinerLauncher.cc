@@ -101,25 +101,24 @@ void MinerLauncher::onPlayerDestroyBlock(ll::event::PlayerDestroyBlockEvent& ev)
         FM_TRACE("player can not destroy block with mc api");
         return; // 玩家无法破坏该方块
     }
-    auto iter = Config::cfg.blocks.find(blockType);
-    if (iter == Config::cfg.blocks.end()) [[unlikely]] {
-        FM_TRACE("block type not found in config");
+    auto rtConfig = Config::getRuntimeBlockConfig(blockType);
+    if (!rtConfig) [[unlikely]] {
+        FM_TRACE("block type not found in rtConfig");
         return; // 配置文件中没有该方块类型
     }
-    auto const& blockConfig = iter->second;
-    if (!canDestroyBlockWithConfig(player, blockConfig)) {
+    if (!canDestroyBlockWithConfig(player, rtConfig)) {
         FM_TRACE("player can not destroy block with config");
         return; // 玩家无法破坏该方块
     }
 
     MinerTaskContext ctx{
         .player      = player,
+        .blockId     = block.getBlockItemId(),
         .tiggerPos   = rawPos,
         .tiggerDimid = dimId,
         .hashedPos   = std::move(hashedPos),
-        .block       = block,
         .blockSource = blockSource,
-        .blockConfig = blockConfig
+        .rtConfig    = std::move(rtConfig)
     };
     ll::coro::keepThis([this, ctx = std::move(ctx)]() -> ll::coro::CoroTask<> {
         co_await ll::chrono::ticks{1};
@@ -138,17 +137,15 @@ bool MinerLauncher::isEnableMiner(Player& player, std::string const& blockType) 
 }
 
 void MinerLauncher::prepareTask(MinerTaskContext ctx) {
-    // 不知道为什么 MoJang 的 Block const& 指向的对象居然不是同一个，这里需要更新一下
-    auto unConst = const_cast<Block*>(&ctx.block);
-    unConst      = const_cast<Block*>(&ctx.blockSource.getBlock(ctx.tiggerPos));
-    if (!unConst->isAir()) {
+    auto& block = ctx.blockSource.getBlock(ctx.tiggerPos);
+    if (!block.isAir()) {
         FM_TRACE("block is not air");
         return; // 方块不是空气代表着玩家没有破坏它
     }
     auto& itemStack = ctx.player.getSelectedItem();
 
     int& limit = ctx.limit;
-    limit      = ctx.blockConfig.limit;
+    limit      = ctx.rtConfig->rawConfig_.limit;
     if (!miner_util::hasUnbreakable(itemStack) && itemStack.isDamageableItem()) {
         auto item = itemStack.getItem();
         if (!item) {
@@ -156,17 +153,19 @@ void MinerLauncher::prepareTask(MinerTaskContext ctx) {
             return; // 物品为空
         }
         limit = std::min(limit, item->getMaxDamage() - itemStack.getDamageValue() - 1); // 动态计算限制为物品保留1点耐久
-        if (Config::cfg.economy.enabled && ctx.blockConfig.cost > 0) {
+        if (Config::cfg.economy.enabled && ctx.rtConfig->rawConfig_.cost > 0) {
             // 动态约束限制为玩家经济
-            limit =
-                std::min(limit, static_cast<int>(EconomySystem::getInstance()->get(ctx.player) / ctx.blockConfig.cost));
+            limit = std::min(
+                limit,
+                static_cast<int>(EconomySystem::getInstance()->get(ctx.player) / ctx.rtConfig->rawConfig_.cost)
+            );
         }
     }
     if (limit <= 1) {
         FM_TRACE("limit <= 1");
         return; // 限制为1或以下则不进行连锁
     }
-
+    FM_TRACE("limit: " << limit);
     FM_TRACE("Task preparation complete");
 
     auto task = std::make_shared<MinerTask>(std::move(ctx), *dispatcher);
@@ -174,11 +173,13 @@ void MinerLauncher::prepareTask(MinerTaskContext ctx) {
 }
 
 bool MinerLauncher::canDestroyBlockWithMcApi(Player& player, Block const& block) const {
+    // TODO: use BlockSource::checkBlockDestroyPermissions ?
     return player.canDestroyBlock(block) || mc_utils::CanDestroyBlock(player.getSelectedItem(), block)
         || mc_utils::CanDestroySpecial(player.getSelectedItem(), block);
 }
-bool MinerLauncher::canDestroyBlockWithConfig(Player& player, Config::BlockConfig const& config) const {
-    bool const hasSilkTouch = EnchantUtils::hasEnchant(Enchant::Type::SilkTouch, player.getSelectedItem());
+bool MinerLauncher::canDestroyBlockWithConfig(Player& player, Config::RuntimeBlockConfig::Ptr const& rtConfig) {
+    bool const  hasSilkTouch = EnchantUtils::hasEnchant(Enchant::Type::SilkTouch, player.getSelectedItem());
+    auto const& config       = rtConfig->rawConfig_;
     return (config.tools.empty()
             || config.tools.contains(player.getSelectedItem().getTypeName()))           /* 不限制工具 / 工具类型匹配 */
         && (config.silkTouchMode == Config::SilkTouchMode::Unlimited                    /* 不限制精准附魔 */
