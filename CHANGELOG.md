@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0-rc.3] - 2025-11-28
+
+- 重写部分代码, 优化性能, 修复特殊情况下可能的崩溃 #7
+
 ## [0.13.0-rc.2] - 2025-11-09
 
 - 修复玩家连锁开关在启动时总被设置为关闭的 Bug
