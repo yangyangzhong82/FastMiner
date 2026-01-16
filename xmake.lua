@@ -56,3 +56,9 @@ target("FastMiner") -- Change this to your mod name.
     if is_mode("release") then 
         set_optimize("fastest")
     end 
+
+    if is_config("target_type", "server") then
+        add_defines("LL_PLAT_S")
+    else
+        add_defines("LL_PLAT_C")
+    end
