@@ -62,10 +62,10 @@ struct MinerTask {
     ll::event::EventBus& eventBus_;       // 事件总线
 
     // BFS
-    std::vector<QueueElement>     queue_{};    // 搜索队列
-    absl::flat_hash_set<size_t>   visited_{};  // 已访问过的方块索引
-    std::vector<Direction> const& directions_; // 方向
-    MinerDispatcher&              dispatcher_; // 任务调度器
+    std::vector<QueueElement>         queue_{};    // 搜索队列
+    absl::flat_hash_set<HashedDimPos> visited_{};  // 已访问过的方块索引
+    std::vector<Direction> const&     directions_; // 方向
+    MinerDispatcher&                  dispatcher_; // 任务调度器
 
     // 计数
     int count_{0};        // 挖掘次数
