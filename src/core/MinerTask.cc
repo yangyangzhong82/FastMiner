@@ -185,7 +185,7 @@ void MinerTask::searchAdjacentBlocks(QueueElement const& element) {
 }
 
 void MinerTask::notifyFinished(long long cpuTime) {
-    ll::coro::keepThis([this, ms = std::move(cpuTime)]() -> ll::coro::CoroTask<> {
+    ll::coro::keepThis([this, cpuTime]() -> ll::coro::CoroTask<> {
         co_await ll::chrono::ticks{1};
         calculateDurabilityDeduction();
         if (!miner_util::hasUnbreakable(tool_)) {
@@ -193,11 +193,17 @@ void MinerTask::notifyFinished(long long cpuTime) {
             tool_.setDamageValue(damage);
             player_.refreshInventory();
         }
-        auto cost = blockConfig_->rawConfig_.cost * (count_ - 1);
 
 #ifdef LL_PLAT_S
+        auto cost = blockConfig_->rawConfig_.cost * (count_ - 1);
         FastMiner::getInstance().getEconomy().reduce(player_.getUuid(), cost);
-        mc_utils::sendText(player_, "本次连锁了 {} 个方块, 消耗了 {} 点耐久, 总耗时 {}ms", count_, deductDamage_, ms);
+        mc_utils::sendText(
+            player_,
+            "本次连锁了 {} 个方块, 消耗了 {} 点耐久, 总耗时 {}ms",
+            count_,
+            deductDamage_,
+            cpuTime
+        );
 #endif
 
         notifyClientBlockUpdate();
