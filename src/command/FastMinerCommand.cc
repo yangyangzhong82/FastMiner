@@ -5,6 +5,7 @@
 #include "gui/Form.h"
 #include "mod/FastMiner.h"
 
+#include "ll/api/Versions.h"
 #include "ll/api/form/CustomForm.h"
 #include "ll/api/form/FormBase.h"
 #include "ll/api/form/SimpleForm.h"
@@ -19,6 +20,7 @@
 #include <ll/api/service/PlayerInfo.h>
 #include <ll/api/service/Service.h>
 #include <ll/api/utils/HashUtils.h>
+
 
 #include <cstdint>
 #include <fmt/core.h>
@@ -62,7 +64,8 @@ struct StatusOption {
 inline constexpr auto ERR_ONLY_PLAYER_USE = "This command can only be used by players.";
 
 void FastMinerCommand::setup() {
-    auto& cmd = ll::command::CommandRegistrar::getInstance().getOrCreateCommand("fm", "FastMiner - 连锁采集");
+    auto& cmd =
+        ll::command::CommandRegistrar::getInstance(ll::isClient()).getOrCreateCommand("fm", "FastMiner - 连锁采集");
 
     // fm
     cmd.overload().execute([](CommandOrigin const& ori, CommandOutput& out) {
