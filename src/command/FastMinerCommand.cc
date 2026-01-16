@@ -64,8 +64,7 @@ struct StatusOption {
 inline constexpr auto ERR_ONLY_PLAYER_USE = "This command can only be used by players.";
 
 void FastMinerCommand::setup() {
-    auto& cmd =
-        ll::command::CommandRegistrar::getInstance(ll::isClient()).getOrCreateCommand("fm", "FastMiner - 连锁采集");
+    auto& cmd = ll::command::CommandRegistrar::getInstance(false).getOrCreateCommand("fm", "FastMiner - 连锁采集");
 
     // fm
     cmd.overload().execute([](CommandOrigin const& ori, CommandOutput& out) {
