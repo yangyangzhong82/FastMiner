@@ -4,15 +4,22 @@
 #include "config/PlayerConfig.h"
 #include "core/MinerLauncher.h"
 
+#include "ll/api/event/EventBus.h"
+#include "ll/api/event/ListenerBase.h"
 #include "ll/api/mod/RegisterHelper.h"
 
 #include <memory>
+#include <mutex>
 
 
 #ifdef LL_PLAT_S
 #include "econbridge/detail/LegacyMoneyEconomy.h"
 #include "econbridge/detail/NullEconomy.h"
 #include "econbridge/detail/ScoreboardEconomy.h"
+#endif
+
+#ifdef LL_PLAT_C
+#include "ll/api/event/client/ClientJoinLevelEvent.h"
 #endif
 
 
@@ -42,6 +49,10 @@ struct FastMiner::Impl {
     }
 #endif
 
+#ifdef LL_PLAT_C
+    ll::event::ListenerPtr mClientJoinLevelListener{nullptr};
+#endif
+
     Impl() : mSelf(*ll::mod::NativeMod::current()) {}
 };
 
@@ -62,13 +73,24 @@ bool FastMiner::enable() {
     PlayerConfig::load();
     PlayerConfig::checkAndTryRemoveNotExistBlock();
 
+#ifdef LL_PLAT_S
     FastMinerCommand::setup();
 
-#ifdef LL_PLAT_S
     mImpl->initEconomy();
 #endif
 
     mImpl->mLauncher = std::make_unique<MinerLauncher>();
+
+#ifdef LL_PLAT_C
+    ll::event::EventBus::getInstance().emplaceListener<ll::event::ClientJoinLevelEvent>(
+        [](ll::event::ClientJoinLevelEvent&) {
+#ifdef DEBUG
+            std::cout << "Client joined level, registering commands" << std::endl;
+#endif
+            FastMinerCommand::setup();
+        }
+    );
+#endif
 
     return true;
 }
@@ -80,6 +102,10 @@ bool FastMiner::disable() {
 
 #ifdef LL_PLAT_S
     mImpl->mEconomy.reset();
+#endif
+
+#ifdef LL_PLAT_C
+    ll::event::EventBus::getInstance().removeListener(mImpl->mClientJoinLevelListener);
 #endif
 
     return true;
