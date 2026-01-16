@@ -1,9 +1,8 @@
 #pragma once
-#include "economy/EconomyConfig.h"
-
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
 
+#include <optional>
 #include <sys/stat.h>
 #include <unordered_map>
 #include <unordered_set>
@@ -38,7 +37,7 @@ struct BlockConfig {
 
 using Blocks = std::unordered_map<std::string, BlockConfig>;
 
-inline constexpr int ConfigVersion = 6;
+inline constexpr int ConfigVersion = 7;
 struct Impl {
     int version = ConfigVersion;
 
@@ -47,8 +46,17 @@ struct Impl {
         int maxResumeTasksPerTick{16};    // 每tick最大恢复任务数
     } dispatcher;
 
-    EconomyConfig economy; // 经济系统
-    Blocks        blocks;  // 方块配置
+#ifdef LL_PLAT_S
+    struct EconomyConfig {
+        enum class EconomyKit { LegacyMoney, ScoreBoard };
+
+        bool        enabled        = false;
+        EconomyKit  kit            = EconomyKit::LegacyMoney;
+        std::string scoreboardName = "Scoreboard";
+    } economy;
+#endif
+
+    Blocks blocks; // 方块配置
 };
 
 inline Impl cfg;

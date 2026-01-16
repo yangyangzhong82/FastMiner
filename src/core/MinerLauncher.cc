@@ -7,7 +7,6 @@
 #include "core/MinerTask.h"
 #include "core/MinerTaskContext.h"
 #include "core/MinerUtil.h"
-#include "economy/EconomySystem.h"
 
 #include "ll/api/chrono/GameChrono.h"
 #include "ll/api/coro/CoroTask.h"
@@ -24,6 +23,7 @@
 #include "mc/world/level/BlockPos.h"
 #include "mc/world/level/BlockSource.h"
 #include "mc/world/level/block/Block.h"
+#include "mod/FastMiner.h"
 
 #include <memory>
 #include <utility>
@@ -153,13 +153,17 @@ void MinerLauncher::prepareTask(MinerTaskContext ctx) {
             return; // 物品为空
         }
         limit = std::min(limit, item->getMaxDamage() - itemStack.getDamageValue() - 1); // 动态计算限制为物品保留1点耐久
+#ifdef LL_PLAT_S
         if (Config::cfg.economy.enabled && ctx.rtConfig->rawConfig_.cost > 0) {
             // 动态约束限制为玩家经济
             limit = std::min(
                 limit,
-                static_cast<int>(EconomySystem::getInstance()->get(ctx.player) / ctx.rtConfig->rawConfig_.cost)
+                static_cast<int>(
+                    FastMiner::getInstance().getEconomy().get(ctx.player.getUuid()) / ctx.rtConfig->rawConfig_.cost
+                )
             );
         }
+#endif
     }
     if (limit <= 1) {
         FM_TRACE("limit <= 1");

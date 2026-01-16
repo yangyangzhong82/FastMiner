@@ -5,7 +5,6 @@
 #include "core/MinerPermitAwaiter.h"
 #include "core/MinerTaskContext.h"
 #include "core/MinerUtil.h"
-#include "economy/EconomySystem.h"
 
 #include "ll/api/chrono/GameChrono.h"
 #include "ll/api/coro/CoroTask.h"
@@ -24,6 +23,7 @@
 #include "mc/world/level/block/Block.h"
 #include "mc/world/level/block/BlockChangeContext.h"
 #include "mc/world/level/block/registry/BlockTypeRegistry.h"
+#include "mod/FastMiner.h"
 
 #include <cstddef>
 #include <vector>
@@ -194,8 +194,12 @@ void MinerTask::notifyFinished(long long cpuTime) {
             player_.refreshInventory();
         }
         auto cost = blockConfig_->rawConfig_.cost * (count_ - 1);
-        EconomySystem::getInstance()->reduce(player_, cost);
+
+#ifdef LL_PLAT_S
+        FastMiner::getInstance().getEconomy().reduce(player_.getUuid(), cost);
         mc_utils::sendText(player_, "本次连锁了 {} 个方块, 消耗了 {} 点耐久, 总耗时 {}ms", count_, deductDamage_, ms);
+#endif
+
         notifyClientBlockUpdate();
         state_ = State::Finished;
         dispatcher_.onTaskFinished(this);

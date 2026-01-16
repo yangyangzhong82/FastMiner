@@ -1,7 +1,11 @@
 #pragma once
-#include "core/MinerLauncher.h"
 #include "ll/api/mod/NativeMod.h"
 #include <memory>
+
+#ifdef LL_PLAT_S
+#include "econbridge/IEconomy.h"
+#endif
+
 
 namespace fm {
 
@@ -11,9 +15,9 @@ class FastMiner {
 public:
     static FastMiner& getInstance();
 
-    FastMiner() : mSelf(*ll::mod::NativeMod::current()) {}
+    FastMiner();
 
-    [[nodiscard]] ll::mod::NativeMod& getSelf() const { return mSelf; }
+    [[nodiscard]] ll::mod::NativeMod& getSelf();
 
     bool load();
 
@@ -23,9 +27,13 @@ public:
 
     bool unload();
 
+#ifdef LL_PLAT_S
+    [[nodiscard]] econbridge::IEconomy& getEconomy() const;
+#endif
+
 private:
-    ll::mod::NativeMod&            mSelf;
-    std::unique_ptr<MinerLauncher> mLauncher;
+    struct Impl;
+    std::unique_ptr<Impl> mImpl;
 };
 
 } // namespace fm
