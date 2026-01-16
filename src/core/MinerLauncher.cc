@@ -10,13 +10,14 @@
 
 #include "ll/api/chrono/GameChrono.h"
 #include "ll/api/coro/CoroTask.h"
+#include "ll/api/coro/InterruptableSleep.h"
 #include "ll/api/event/EventBus.h"
 #include "ll/api/event/ListenerBase.h"
 #include "ll/api/event/player/PlayerDestroyBlockEvent.h"
 #include "ll/api/event/player/PlayerDisconnectEvent.h"
 #include "ll/api/thread/ServerThreadExecutor.h"
 
-
+#include "mc/platform/UUID.h"
 #include "mc/world/item/Item.h"
 #include "mc/world/item/ItemStackBase.h"
 #include "mc/world/item/enchanting/EnchantUtils.h"
@@ -25,8 +26,12 @@
 #include "mc/world/level/block/Block.h"
 #include "mod/FastMiner.h"
 
+#include <atomic>
+#include <cstddef>
 #include <memory>
 #include <utility>
+
+#include "absl/container/flat_hash_set.h"
 
 
 #ifdef DEBUG
@@ -37,38 +42,45 @@
 
 namespace fm {
 
+struct MinerLauncher::Impl {
+    std::unique_ptr<MinerDispatcher> dispatcher; // 调度器
+    ll::event::ListenerPtr           playerDestroyBlockListener;
+    ll::event::ListenerPtr           playerDisconnectListener;
+    std::atomic<bool>                abort; // 是否需要中止
+    ll::coro::InterruptableSleep     sleep; // 中断等待
+};
 
-MinerLauncher::MinerLauncher() {
-    dispatcher = std::make_unique<MinerDispatcher>();
+MinerLauncher::MinerLauncher() : impl(std::make_unique<Impl>()) {
+    impl->dispatcher = std::make_unique<MinerDispatcher>();
 
-    auto& bus                  = ll::event::EventBus::getInstance();
-    playerDestroyBlockListener = bus.emplaceListener<ll::event::PlayerDestroyBlockEvent>(
+    auto& bus                        = ll::event::EventBus::getInstance();
+    impl->playerDestroyBlockListener = bus.emplaceListener<ll::event::PlayerDestroyBlockEvent>(
         [&](auto& ev) { onPlayerDestroyBlock(ev); },
         ll::event::EventPriority::Low
     );
-    playerDisconnectListener = bus.emplaceListener<ll::event::PlayerDisconnectEvent>([&](auto& ev) {
+    impl->playerDisconnectListener = bus.emplaceListener<ll::event::PlayerDisconnectEvent>([&](auto& ev) {
         auto& player = ev.self();
-        dispatcher->interruptPlayerTask(player);
+        impl->dispatcher->interruptPlayerTask(player);
     });
 
-    abort = false;
+    impl->abort = false;
     ll::coro::keepThis([this]() -> ll::coro::CoroTask<> {
-        while (!abort) {
-            co_await sleep.sleepFor(ll::chrono::ticks{1});
-            if (abort) {
+        while (!impl->abort) {
+            co_await impl->sleep.sleepFor(ll::chrono::ticks{1});
+            if (impl->abort) {
                 break;
             }
-            dispatcher->tick();
+            impl->dispatcher->tick();
         }
         co_return;
     }).launch(ll::thread::ServerThreadExecutor::getDefault());
 }
 
 MinerLauncher::~MinerLauncher() {
-    abort = true;
-    sleep.interrupt(true);
-    ll::event::EventBus::getInstance().removeListener(playerDestroyBlockListener);
-    ll::event::EventBus::getInstance().removeListener(playerDisconnectListener);
+    impl->abort = true;
+    impl->sleep.interrupt(true);
+    ll::event::EventBus::getInstance().removeListener(impl->playerDestroyBlockListener);
+    ll::event::EventBus::getInstance().removeListener(impl->playerDisconnectListener);
 }
 
 void MinerLauncher::onPlayerDestroyBlock(ll::event::PlayerDestroyBlockEvent& ev) {
@@ -77,11 +89,11 @@ void MinerLauncher::onPlayerDestroyBlock(ll::event::PlayerDestroyBlockEvent& ev)
     auto  dimId  = player.getDimensionId();
 
     auto hashedPos = miner_util::hashDimensionPosition(rawPos, dimId);
-    if (ev.isCancelled() || dispatcher->isProcessing(hashedPos)) {
+    if (ev.isCancelled() || impl->dispatcher->isProcessing(hashedPos)) {
         FM_TRACE("event cancelled or processing");
         return; // 已处理 / 正在处理
     }
-    if (!dispatcher->canLaunchTask(player)) {
+    if (!impl->dispatcher->canLaunchTask(player)) {
         FM_TRACE("The player has unfinished tasks.");
         return;
     }
@@ -172,8 +184,8 @@ void MinerLauncher::prepareTask(MinerTaskContext ctx) {
     FM_TRACE("limit: " << limit);
     FM_TRACE("Task preparation complete");
 
-    auto task = std::make_shared<MinerTask>(std::move(ctx), *dispatcher);
-    dispatcher->launch(task);
+    auto task = std::make_shared<MinerTask>(std::move(ctx), *impl->dispatcher);
+    impl->dispatcher->launch(task);
 }
 
 bool MinerLauncher::canDestroyBlockWithMcApi(Player& player, Block const& block) const {
