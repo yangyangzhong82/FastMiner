@@ -43,14 +43,6 @@
 
 namespace mc_utils {
 
-[[nodiscard]] inline Block const& getBlock(BlockPos& bp, int dimid) {
-    auto weakDimension = ll::service::getLevel()->getDimension(dimid);
-    auto lock          = weakDimension.lock();
-    if (lock) {
-        return lock->getBlockSourceFromMainChunkSource().getBlock(bp);
-    }
-    throw std::runtime_error("dimension not found");
-}
 
 // IDA: v1.21.0
 [[nodiscard]] inline bool isSneaking(Player& player) {
@@ -71,35 +63,6 @@ namespace mc_utils {
     }
     return it->canDestroySpecial(block);
 }
-
-[[nodiscard]] inline BlockPos face2Pos(BlockPos const& sour, uchar face) {
-    BlockPos dest = sour;
-    switch (face) {
-    case 0:
-        --dest.y; // 下
-        break;
-    case 1:
-        ++dest.y; // 上
-        break;
-    case 2:
-        --dest.z; // 北
-        break;
-    case 3:
-        ++dest.z; // 南
-        break;
-    case 4:
-        --dest.x; // 西
-        break;
-    case 5:
-        ++dest.x; // 东
-        break;
-    default:
-        // Unknown face
-        break;
-    }
-    return dest;
-}
-
 
 // Template function sendText, usage: sendText() or sendText<LogLevel::Success>().
 enum class LogLevel : int { Normal = -1, Debug = 0, Info = 1, Warn = 2, Error = 3, Fatal = 4, Success = 5 };
