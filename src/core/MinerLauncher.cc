@@ -105,7 +105,7 @@ void MinerLauncher::onPlayerDestroyBlock(ll::event::PlayerDestroyBlockEvent& ev)
     auto& blockSource = player.getDimensionBlockSource();
     auto& block       = blockSource.getBlock(rawPos);
     auto& blockType   = block.getTypeName();
-    if (!isEnableMiner(player, blockType)) {
+    if (!isBlockEnabled(player, blockType)) {
         FM_TRACE("player not enable miner");
         return; // 玩家未启用该方块类型 / 未开启连锁
     }
@@ -140,7 +140,7 @@ void MinerLauncher::onPlayerDestroyBlock(ll::event::PlayerDestroyBlockEvent& ev)
 }
 
 
-bool MinerLauncher::isEnableMiner(Player& player, std::string const& blockType) const {
+bool MinerLauncher::isBlockEnabled(Player& player, std::string const& blockType) const {
     auto& uuid             = player.getUuid();
     bool  sneakingRequired = PlayerConfig::isEnabled(uuid, PlayerConfig::KEY_SNEAK);
     bool  sneaking         = mc_utils::isSneaking(player);

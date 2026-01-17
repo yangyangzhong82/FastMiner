@@ -24,7 +24,7 @@ public:
 
     void onPlayerDestroyBlock(ll::event::PlayerDestroyBlockEvent& ev);
 
-    bool isEnableMiner(Player& player, std::string const& blockType) const;
+    bool isBlockEnabled(Player& player, std::string const& blockType) const;
 
     void prepareTask(MinerTaskContext ctx);
 
