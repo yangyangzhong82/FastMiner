@@ -1,10 +1,14 @@
 #pragma once
 
 
-namespace fm::FastMinerCommand {
+namespace fm {
 
 
-void setup();
+struct FastMinerCommand {
+    FastMinerCommand() = delete;
+
+    static void setup();
+};
 
 
-} // namespace fm::FastMinerCommand
+} // namespace fm
