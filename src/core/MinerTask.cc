@@ -160,13 +160,21 @@ void MinerTask::tryBreakBlock(QueueElement const& element) {
 void MinerTask::calculateDurabilityDeduction() {
     if (durability_ == 0) {
         deductDamage_ = count_; // 无耐久附魔，按照破坏数量扣除耐久
-    } else {
-        // TODO: 分离到其它线程进行计算?
-        int r = 100 / (durability_ + 1);
-        for (int i = 0; i < count_; ++i) {
-            if (ll::random_utils::rand<int>(0, 99) < r) deductDamage_++;
-        }
+        return;
     }
+    struct LeviRngAdapter {
+        using result_type = uint64_t;
+        static constexpr result_type min() { return 0; }
+        static constexpr result_type max() { return std::numeric_limits<uint64_t>::max(); }
+        result_type                  operator()() { return ll::random_utils::rand<uint64_t>(); }
+    } rng;
+
+    // 二项分布
+    double p = 1.0 / (static_cast<double>(durability_) + 1.0);
+
+    std::binomial_distribution<int> dist(count_, p);
+
+    deductDamage_ = dist(rng);
 }
 
 void MinerTask::searchAdjacentBlocks(QueueElement const& element) {
