@@ -11,6 +11,7 @@ jobs:
         target_type:
           - server
           - client
+      fail-fast: false
     steps:
       - uses: actions/checkout@v6
 
