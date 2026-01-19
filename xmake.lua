@@ -47,6 +47,7 @@ target("FastMiner") -- Change this to your mod name.
     set_languages("c++20")
     set_symbols("debug")
     add_packages("abseil")
+    add_headerfiles("src/**.h")
 
     if is_mode("debug") then
         add_defines("DEBUG")
@@ -59,8 +60,12 @@ target("FastMiner") -- Change this to your mod name.
     if is_config("target_type", "server") then
         add_defines("LL_PLAT_S")
         add_packages("economy_bridge")
+        add_files("src-server/**.cc")
+        add_includedirs("src-server")
+        add_headerfiles("src-server/**.h")
     else
         add_defines("LL_PLAT_C")
         add_files("src-client/**.cc")
         add_includedirs("src-client")
+        add_headerfiles("src-client/**.h")
     end

@@ -1,35 +1,20 @@
 #pragma once
 #include "fmt/format.h"
+
 #include "ll/api/service/Bedrock.h"
-#include "mc/_HeaderOutputPredefine.h"
-#include "mc/deps/core/string/HashedString.h"
-#include "mc/deps/game_refs/WeakRef.h"
-#include "mc/server/ServerLevel.h"
-#include "mc/server/commands/CommandBlockNameResult.h"
-#include "mc/server/commands/CommandOrigin.h"
+#include <ll/api/service/ServiceManager.h>
+
 #include "mc/server/commands/CommandOutput.h"
-#include "mc/server/commands/MinecraftCommands.h"
-#include "mc/server/commands/PlayerCommandOrigin.h"
-#include "mc/server/commands/ServerCommandOrigin.h"
-#include "mc/world/Minecraft.h"
 #include "mc/world/actor/player/Player.h"
 #include "mc/world/actor/provider/SynchedActorDataAccess.h"
 #include "mc/world/item/Item.h"
 #include "mc/world/item/ItemStackBase.h"
-#include "mc/world/level/BlockPos.h"
-#include "mc/world/level/BlockSource.h"
-#include "mc/world/level/ChunkPos.h"
 #include "mc/world/level/Level.h"
 #include "mc/world/level/block/Block.h"
 #include "mc/world/level/block/actor/BlockActor.h"
 #include "mc/world/level/chunk/ChunkSource.h"
 #include "mc/world/level/chunk/LevelChunk.h"
 #include "mc/world/level/dimension/Dimension.h"
-#include <algorithm>
-#include <ll/api/service/Bedrock.h>
-#include <ll/api/service/ServerInfo.h>
-#include <ll/api/service/Service.h>
-#include <ll/api/service/ServiceManager.h>
 #include <mc/deps/core/utility/optional_ref.h>
 #include <mc/server/commands/Command.h>
 #include <mc/server/commands/CommandContext.h>
@@ -37,11 +22,13 @@
 #include <mc/server/commands/PlayerCommandOrigin.h>
 #include <mc/world/Minecraft.h>
 #include <mc/world/actor/player/Player.h>
+
+#include <algorithm>
 #include <memory>
 #include <string>
 
 
-namespace mc_utils {
+namespace fm::mc_utils {
 
 
 // IDA: v1.21.0
@@ -120,4 +107,4 @@ inline void sendText(const std::string& realName, const std::string& fmt, Args&&
 }
 
 
-} // namespace mc_utils
+} // namespace fm::mc_utils

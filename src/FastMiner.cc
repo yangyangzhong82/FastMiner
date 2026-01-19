@@ -1,7 +1,7 @@
-#include "mod/FastMiner.h"
+#include "FastMiner.h"
 #include "command/FastMinerCommand.h"
-#include "config/Config.h"
-#include "config/PlayerConfig.h"
+#include "config/ConfigBase.h"
+#include "config/ConfigFactory.h"
 #include "core/MinerLauncher.h"
 
 #include "ll/api/event/EventBus.h"
@@ -13,6 +13,7 @@
 
 
 #ifdef LL_PLAT_S
+#include "config/ServerConfigModel.h"
 #include "econbridge/detail/LegacyMoneyEconomy.h"
 #include "econbridge/detail/NullEconomy.h"
 #include "econbridge/detail/ScoreboardEconomy.h"
@@ -24,7 +25,6 @@
 
 
 namespace fm {
-using Config::cfg;
 
 
 struct FastMiner::Impl {
@@ -35,15 +35,15 @@ struct FastMiner::Impl {
     std::unique_ptr<econbridge::IEconomy> mEconomy{nullptr};
 
     void initEconomy() {
-        if (!Config::cfg.economy.enabled) {
+        if (!ConfigBase::data.economy.enabled) {
             mEconomy = std::make_unique<econbridge::detail::NullEconomy>();
         }
-        switch (cfg.economy.kit) {
-        case Config::Impl::EconomyConfig::EconomyKit::LegacyMoney:
+        switch (ConfigBase::data.economy.kit) {
+        case ConfigBase::ConfigModel::EconomyConfig::EconomyKit::LegacyMoney:
             mEconomy = std::make_unique<econbridge::detail::LegacyMoneyEconomy>();
             break;
-        case Config::Impl::EconomyConfig::EconomyKit::ScoreBoard:
-            mEconomy = std::make_unique<econbridge::detail::ScoreboardEconomy>(Config::cfg.economy.scoreboardName);
+        case ConfigBase::ConfigModel::EconomyConfig::EconomyKit::ScoreBoard:
+            mEconomy = std::make_unique<econbridge::detail::ScoreboardEconomy>(ConfigBase::data.economy.scoreboardName);
             break;
         }
     }
@@ -68,10 +68,8 @@ FastMiner& FastMiner::getInstance() {
 bool FastMiner::load() { return true; }
 
 bool FastMiner::enable() {
-    Config::load();
-
-    PlayerConfig::load();
-    PlayerConfig::checkAndTryRemoveNotExistBlock();
+    auto& instance = ConfigFactory::getInstance();
+    instance.load();
 
 #ifdef LL_PLAT_S
     FastMinerCommand::setup();
@@ -96,7 +94,7 @@ bool FastMiner::enable() {
 }
 
 bool FastMiner::disable() {
-    PlayerConfig::save();
+    ConfigFactory::getInstance().save();
 
     mImpl->mLauncher.reset();
 

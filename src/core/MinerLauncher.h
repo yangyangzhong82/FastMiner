@@ -1,6 +1,5 @@
 #pragma once
 #include "Global.h"
-#include "config/Config.h"
 #include "core/MinerTaskContext.h"
 
 #include "ll/api/event/player/PlayerDestroyBlockEvent.h"
@@ -29,7 +28,7 @@ public:
     void prepareTask(MinerTaskContext ctx);
 
     bool        canDestroyBlockWithMcApi(Player& player, Block const& block) const;
-    static bool canDestroyBlockWithConfig(Player& player, Config::RuntimeBlockConfig::Ptr const& rtConfig);
+    static bool canDestroyBlockWithConfig(Player& player, RuntimeBlockConfig::Ptr const& rtConfig);
 };
 
 

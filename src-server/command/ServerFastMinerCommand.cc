@@ -1,9 +1,9 @@
-#include "FastMinerCommand.h"
-#include "McUtils.h"
-#include "config/Config.h"
-#include "config/PlayerConfig.h"
-#include "gui/Form.h"
-#include "mod/FastMiner.h"
+#include "ServerFastMinerCommand.h"
+#include "FastMiner.h"
+#include "Type.h"
+#include "utils/McUtils.h"
+
+#include "../gui/Form.h"
 
 #include "ll/api/Versions.h"
 #include "ll/api/form/CustomForm.h"
@@ -28,6 +28,7 @@
 #include <sstream>
 #include <string>
 
+#include "config/ConfigFactory.h"
 #include "magic_enum.hpp"
 
 #include "mc/nbt/ByteTag.h"
@@ -53,9 +54,8 @@
 #include <mc/world/actor/Actor.h>
 #include <mc/world/actor/player/Player.h>
 
-
 namespace fm {
-
+namespace server {
 
 struct StatusOption {
     enum class Status : bool { off = false, on = true } state;
@@ -63,8 +63,9 @@ struct StatusOption {
 
 inline constexpr auto ERR_ONLY_PLAYER_USE = "This command can only be used by players.";
 
-void FastMinerCommand::setup() {
-    auto& cmd = ll::command::CommandRegistrar::getInstance(true).getOrCreateCommand("fm", "FastMiner - 连锁采集");
+
+void ServerFastMinerCommand::setup(std::string_view command, std::string_view description) {
+    auto& cmd = ll::command::CommandRegistrar::getInstance(true).getOrCreateCommand(command.data(), description.data());
 
     // fm
     cmd.overload().execute([](CommandOrigin const& ori, CommandOutput& out) {
@@ -83,7 +84,11 @@ void FastMinerCommand::setup() {
             }
             Player& pl = *static_cast<Player*>(ori.getEntity());
 
-            PlayerConfig::setEnabled(pl.getUuid(), PlayerConfig::KEY_ENABLE, (bool)opt.state);
+            ConfigFactory::getInstance().as<ServerConfig>().setEnabled(
+                pl.getUuid(),
+                ServerConfig::KEY_ENABLE.data(),
+                (bool)opt.state
+            );
             mc_utils::sendText(pl, "设置已保存");
         }
     );
@@ -142,4 +147,5 @@ void FastMinerCommand::setup() {
 }
 
 
+} // namespace server
 } // namespace fm

@@ -1,12 +1,12 @@
 #pragma once
 #include "core/MinerLauncher.h"
-#include "McUtils.h"
-#include "config/Config.h"
-#include "config/PlayerConfig.h"
+#include "FastMiner.h"
+#include "config/ConfigFactory.h"
 #include "core/MinerDispatcher.h"
 #include "core/MinerTask.h"
 #include "core/MinerTaskContext.h"
 #include "core/MinerUtil.h"
+#include "utils/McUtils.h"
 
 #include "ll/api/chrono/GameChrono.h"
 #include "ll/api/coro/CoroTask.h"
@@ -24,7 +24,6 @@
 #include "mc/world/level/BlockPos.h"
 #include "mc/world/level/BlockSource.h"
 #include "mc/world/level/block/Block.h"
-#include "mod/FastMiner.h"
 
 #include <atomic>
 #include <cstddef>
@@ -113,7 +112,7 @@ void MinerLauncher::onPlayerDestroyBlock(ll::event::PlayerDestroyBlockEvent& ev)
         FM_TRACE("player can not destroy block with mc api");
         return; // 玩家无法破坏该方块
     }
-    auto rtConfig = Config::getRuntimeBlockConfig(blockType);
+    auto rtConfig = ConfigBase::getRuntimeBlockConfig(blockType);
     if (!rtConfig) [[unlikely]] {
         FM_TRACE("block type not found in rtConfig");
         return; // 配置文件中没有该方块类型
@@ -141,11 +140,17 @@ void MinerLauncher::onPlayerDestroyBlock(ll::event::PlayerDestroyBlockEvent& ev)
 
 
 bool MinerLauncher::isBlockEnabled(Player& player, std::string const& blockType) const {
+#ifdef LL_PLAT_S
+    auto& inst = ConfigFactory::getInstance().as<server::ServerConfig>();
+
     auto& uuid             = player.getUuid();
-    bool  sneakingRequired = PlayerConfig::isEnabled(uuid, PlayerConfig::KEY_SNEAK);
+    bool  sneakingRequired = inst.isEnabled(uuid, server::ServerConfig::KEY_SNEAK.data());
     bool  sneaking         = mc_utils::isSneaking(player);
-    return PlayerConfig::isEnabled(uuid, PlayerConfig::KEY_ENABLE) && PlayerConfig::isEnabled(uuid, blockType)
+    return inst.isEnabled(uuid, server::ServerConfig::KEY_ENABLE.data()) && inst.isEnabled(uuid, blockType)
         && (!sneakingRequired || sneaking); // 如果要求下蹲，则必须下蹲；否则忽略
+#else
+    return true; // TODO: fix
+#endif
 }
 
 void MinerLauncher::prepareTask(MinerTaskContext ctx) {
@@ -166,7 +171,7 @@ void MinerLauncher::prepareTask(MinerTaskContext ctx) {
         }
         limit = std::min(limit, item->getMaxDamage() - itemStack.getDamageValue() - 1); // 动态计算限制为物品保留1点耐久
 #ifdef LL_PLAT_S
-        if (Config::cfg.economy.enabled && ctx.rtConfig->rawConfig_.cost > 0) {
+        if (ConfigBase::data.economy.enabled && ctx.rtConfig->rawConfig_.cost > 0) {
             // 动态约束限制为玩家经济
             limit = std::min(
                 limit,
@@ -193,14 +198,18 @@ bool MinerLauncher::canDestroyBlockWithMcApi(Player& player, Block const& block)
     return player.canDestroyBlock(block) || mc_utils::CanDestroyBlock(player.getSelectedItem(), block)
         || mc_utils::CanDestroySpecial(player.getSelectedItem(), block);
 }
-bool MinerLauncher::canDestroyBlockWithConfig(Player& player, Config::RuntimeBlockConfig::Ptr const& rtConfig) {
+bool MinerLauncher::canDestroyBlockWithConfig(Player& player, RuntimeBlockConfig::Ptr const& rtConfig) {
+#ifdef LL_PLAT_S
     bool const  hasSilkTouch = EnchantUtils::hasEnchant(Enchant::Type::SilkTouch, player.getSelectedItem());
     auto const& config       = rtConfig->rawConfig_;
-    return (config.tools.empty()
-            || config.tools.contains(player.getSelectedItem().getTypeName()))           /* 不限制工具 / 工具类型匹配 */
-        && (config.silkTouchMode == Config::SilkTouchMode::Unlimited                    /* 不限制精准附魔 */
-            || (config.silkTouchMode == Config::SilkTouchMode::Forbid && !hasSilkTouch) /* 禁止精准附魔 */
-            || (config.silkTouchMode == Config::SilkTouchMode::Need && hasSilkTouch));  /* 需要精准附魔 */
+    return (config.tools.empty() || config.tools.contains(player.getSelectedItem().getTypeName())
+           )                                                                            /* 不限制工具 / 工具类型匹配 */
+        && (config.silkTouchMode == server::SilkTouchMode::Unlimited                    /* 不限制精准附魔 */
+            || (config.silkTouchMode == server::SilkTouchMode::Forbid && !hasSilkTouch) /* 禁止精准附魔 */
+            || (config.silkTouchMode == server::SilkTouchMode::Need && hasSilkTouch));  /* 需要精准附魔 */
+#else
+    return true; // TODO: fix
+#endif
 }
 
 } // namespace fm

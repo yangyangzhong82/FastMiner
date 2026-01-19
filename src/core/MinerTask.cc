@@ -1,10 +1,10 @@
 #include "MinerTask.h"
-#include "McUtils.h"
-#include "config/Config.h"
+#include "FastMiner.h"
 #include "core/MinerDispatcher.h"
 #include "core/MinerPermitAwaiter.h"
 #include "core/MinerTaskContext.h"
 #include "core/MinerUtil.h"
+#include "utils/McUtils.h"
 
 #include "ll/api/chrono/GameChrono.h"
 #include "ll/api/coro/CoroTask.h"
@@ -23,7 +23,6 @@
 #include "mc/world/level/block/Block.h"
 #include "mc/world/level/block/BlockChangeContext.h"
 #include "mc/world/level/block/registry/BlockTypeRegistry.h"
-#include "mod/FastMiner.h"
 
 #include <cstddef>
 #include <vector>
@@ -84,7 +83,7 @@ MinerTask::MinerTask(MinerTaskContext ctx, MinerDispatcher& dispatcher)
   durability_(EnchantUtils::getEnchantLevel(::Enchant::Type::Unbreaking, tool_)),
   blockChangeCtx_(ActorChangeContext{&player_}),
   eventBus_(ll::event::EventBus::getInstance()),
-  directions_(blockConfig_->rawConfig_.destroyMode == Config::DestroyMode::Cube ? CubeDirections : AdjacentDirections),
+  directions_(blockConfig_->rawConfig_.destroyMode == DestroyMode::Cube ? CubeDirections : AdjacentDirections),
   dispatcher_(dispatcher) {}
 
 void MinerTask::execute() {

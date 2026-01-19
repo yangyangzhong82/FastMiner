@@ -1,6 +1,7 @@
 #include "MinerDispatcher.h"
-#include "config/Config.h"
+#include "config/ConfigBase.h"
 #include "core/MinerTask.h"
+
 #include "mc/world/actor/player/Player.h"
 
 namespace fm {
@@ -42,7 +43,7 @@ void MinerDispatcher::onTaskFinished(MinerTask* task) { tasks_.erase(task->playe
 void MinerDispatcher::tick() {
     if (tasks_.empty()) return;
 
-    auto const& cfg         = Config::cfg.dispatcher;
+    auto const& cfg         = ConfigBase::getDispatcherConfig();
     int const&  globalLimit = cfg.globalBlockLimitPerTick;
     int const&  maxResume   = cfg.maxResumeTasksPerTick;
 
