@@ -65,7 +65,7 @@ inline constexpr auto ERR_ONLY_PLAYER_USE = "This command can only be used by pl
 
 
 void ServerFastMinerCommand::setup(std::string_view command, std::string_view description) {
-    auto& cmd = ll::command::CommandRegistrar::getInstance(true).getOrCreateCommand(command.data(), description.data());
+    auto& cmd = ll::command::CommandRegistrar::getInstance(false).getOrCreateCommand(command.data(), description.data());
 
     // fm
     cmd.overload().execute([](CommandOrigin const& ori, CommandOutput& out) {
