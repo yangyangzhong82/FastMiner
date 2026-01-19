@@ -1,11 +1,13 @@
 #pragma once
+#include "config/ConfigBase.h"
 
 namespace fm::client {
 
-struct ClientConfig {
-    static int constexpr SchemaVersion = 1;
-
-    int version = SchemaVersion;
+class ClientConfig final : public ConfigBase {
+public:
+    void load() override;
+    void save() override;
+    void buildRuntimeConfigMap() override;
 };
 
 } // namespace fm::client

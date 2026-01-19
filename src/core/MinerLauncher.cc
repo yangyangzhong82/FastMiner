@@ -162,7 +162,7 @@ void MinerLauncher::prepareTask(MinerTaskContext ctx) {
     auto& itemStack = ctx.player.getSelectedItem();
 
     int& limit = ctx.limit;
-    limit      = ctx.rtConfig->rawConfig_.limit;
+    limit      = ctx.rtConfig->rawConfig_.limit.value_or(0);
     if (!miner_util::hasUnbreakable(itemStack) && itemStack.isDamageableItem()) {
         auto item = itemStack.getItem();
         if (!item) {

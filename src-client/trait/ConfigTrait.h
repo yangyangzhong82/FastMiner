@@ -1,14 +1,19 @@
 #pragma once
 #include "Type.h"
 
-#include "../config/ClientConfig.h"
+#include "../config/ClientConfigModel.h"
 
 namespace fm {
 
 
 template <>
-struct internal::ImplType<tag::ConfigTag> {
-    using type = client::ClientConfig;
+struct internal::ImplType<tag::ConfigModelTag> {
+    using type = client::ClientConfigModel;
+};
+
+template <>
+struct internal::ImplType<tag::BlockConfigTag> {
+    using type = client::BlockConfig;
 };
 
 
