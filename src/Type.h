@@ -13,6 +13,8 @@ struct ConfigModelTag;
 struct BlockConfigTag;
 struct ConfigFactoryTag;
 
+struct MinerLauncherTag;
+
 } // namespace tag
 
 namespace internal {

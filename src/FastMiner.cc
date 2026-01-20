@@ -2,7 +2,6 @@
 #include "command/FastMinerCommand.h"
 #include "config/ConfigBase.h"
 #include "config/ConfigFactory.h"
-#include "core/MinerLauncher.h"
 
 #include "ll/api/event/EventBus.h"
 #include "ll/api/event/ListenerBase.h"
@@ -23,13 +22,16 @@
 #include "ll/api/event/client/ClientJoinLevelEvent.h"
 #endif
 
+#include "trait/MinerLauncherTrait.h"
 
 namespace fm {
 
+using LauncherImpl = internal::ImplType<tag::MinerLauncherTag>::type;
 
 struct FastMiner::Impl {
-    ll::mod::NativeMod&            mSelf;
-    std::unique_ptr<MinerLauncher> mLauncher;
+
+    ll::mod::NativeMod&           mSelf;
+    std::unique_ptr<LauncherImpl> mLauncher;
 
 #ifdef LL_PLAT_S
     std::unique_ptr<econbridge::IEconomy> mEconomy{nullptr};
@@ -77,7 +79,7 @@ bool FastMiner::enable() {
     mImpl->initEconomy();
 #endif
 
-    mImpl->mLauncher = std::make_unique<MinerLauncher>();
+    mImpl->mLauncher = std::make_unique<LauncherImpl>();
 
 #ifdef LL_PLAT_C
     ll::event::EventBus::getInstance().emplaceListener<ll::event::ClientJoinLevelEvent>(

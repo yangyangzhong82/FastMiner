@@ -15,6 +15,7 @@ struct RuntimeBlockConfig {
     using BlockConfig = typename internal::ImplType<tag::BlockConfigTag>::type;
 
     BlockConfig                  rawConfig_;
+    std::optional<int>           limit{std::nullopt};
     absl::flat_hash_set<BlockID> similarBlock_{};
     explicit RuntimeBlockConfig(BlockConfig config) : rawConfig_(std::move(config)) {}
 };

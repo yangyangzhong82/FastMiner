@@ -12,23 +12,26 @@ class Player;
 namespace fm {
 
 
-class MinerLauncher final {
+class MinerLauncher {
     struct Impl;
     std::unique_ptr<Impl> impl;
+
+    void onPlayerDestroyBlock(ll::event::PlayerDestroyBlockEvent& ev);
+    bool canDestroyBlockWithMcApi(Player& player, Block const& block) const;
+    void prepareAndLaunchTask(MinerTaskContext ctx);
 
 public:
     FM_DISABLE_COPY_MOVE(MinerLauncher);
     explicit MinerLauncher();
-    ~MinerLauncher();
+    virtual ~MinerLauncher();
 
-    void onPlayerDestroyBlock(ll::event::PlayerDestroyBlockEvent& ev);
+    virtual bool isMinerEnabled(Player& player, std::string const& blockType) = 0;
 
-    bool isBlockEnabled(Player& player, std::string const& blockType) const;
+    virtual bool canDestroyBlockWithConfig(Player& player, RuntimeBlockConfig::Ptr const& rtConfig) = 0;
 
-    void prepareTask(MinerTaskContext ctx);
+    virtual int calculateLimit(MinerTaskContext const& ctx);
 
-    bool        canDestroyBlockWithMcApi(Player& player, Block const& block) const;
-    static bool canDestroyBlockWithConfig(Player& player, RuntimeBlockConfig::Ptr const& rtConfig);
+    int calculateDurabilityLimit(MinerTaskContext const& ctx) const;
 };
 
 

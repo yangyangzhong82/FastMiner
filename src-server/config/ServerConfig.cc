@@ -212,7 +212,8 @@ void ServerConfig::_buildDefaultConfig() {
     };
 }
 std::shared_ptr<RuntimeBlockConfig> ServerConfig::_buildRuntimeBlockConfig(BlockConfig const& config) {
-    auto rtConfig = std::make_shared<RuntimeBlockConfig>(config);
+    auto rtConfig   = std::make_shared<RuntimeBlockConfig>(config);
+    rtConfig->limit = config.limit;
     rtConfig->similarBlock_.reserve(config.similarBlock.size());
     for (auto const& similar : config.similarBlock) {
         rtConfig->similarBlock_.insert(getBlockIdCached(similar));

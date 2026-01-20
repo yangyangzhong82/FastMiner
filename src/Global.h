@@ -11,3 +11,9 @@
 #define FM_DISABLE_COPY_MOVE(ClassName)                                                                                \
     FM_DISABLE_COPY(ClassName);                                                                                        \
     FM_DISABLE_MOVE(ClassName)
+
+#ifdef DEBUG
+#define FM_TRACE(...) std::cout << __VA_ARGS__ << std::endl
+#else
+#define FM_TRACE(...) (void)0
+#endif

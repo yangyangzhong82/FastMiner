@@ -1,6 +1,5 @@
 #pragma once
 #include "core/MinerLauncher.h"
-#include "FastMiner.h"
 #include "config/ConfigFactory.h"
 #include "core/MinerDispatcher.h"
 #include "core/MinerTask.h"
@@ -17,27 +16,14 @@
 #include "ll/api/event/player/PlayerDisconnectEvent.h"
 #include "ll/api/thread/ServerThreadExecutor.h"
 
-#include "mc/platform/UUID.h"
 #include "mc/world/item/Item.h"
 #include "mc/world/item/ItemStackBase.h"
-#include "mc/world/item/enchanting/EnchantUtils.h"
-#include "mc/world/level/BlockPos.h"
 #include "mc/world/level/BlockSource.h"
 #include "mc/world/level/block/Block.h"
 
 #include <atomic>
-#include <cstddef>
 #include <memory>
 #include <utility>
-
-#include "absl/container/flat_hash_set.h"
-
-
-#ifdef DEBUG
-#define FM_TRACE(...) std::cout << __VA_ARGS__ << std::endl
-#else
-#define FM_TRACE(...) (void)0
-#endif
 
 namespace fm {
 
@@ -96,16 +82,12 @@ void MinerLauncher::onPlayerDestroyBlock(ll::event::PlayerDestroyBlockEvent& ev)
         FM_TRACE("The player has unfinished tasks.");
         return;
     }
-    if (!player.isSurvival()) {
-        FM_TRACE("player not survival");
-        return; // 非生存模式
-    }
 
     auto& blockSource = player.getDimensionBlockSource();
     auto& block       = blockSource.getBlock(rawPos);
     auto& blockType   = block.getTypeName();
-    if (!isBlockEnabled(player, blockType)) {
-        FM_TRACE("player not enable miner");
+    if (!isMinerEnabled(player, blockType)) {
+        FM_TRACE("isMinerEnabled return false");
         return; // 玩家未启用该方块类型 / 未开启连锁
     }
     if (!canDestroyBlockWithMcApi(player, block)) {
@@ -133,64 +115,9 @@ void MinerLauncher::onPlayerDestroyBlock(ll::event::PlayerDestroyBlockEvent& ev)
     };
     ll::coro::keepThis([this, ctx = std::move(ctx)]() -> ll::coro::CoroTask<> {
         co_await ll::chrono::ticks{1};
-        this->prepareTask(std::move(ctx));
+        this->prepareAndLaunchTask(std::move(ctx));
         co_return;
     }).launch(ll::thread::ServerThreadExecutor::getDefault());
-}
-
-
-bool MinerLauncher::isBlockEnabled(Player& player, std::string const& blockType) const {
-#ifdef LL_PLAT_S
-    auto& inst = ConfigFactory::getInstance().as<server::ServerConfig>();
-
-    auto& uuid             = player.getUuid();
-    bool  sneakingRequired = inst.isEnabled(uuid, server::ServerConfig::KEY_SNEAK.data());
-    bool  sneaking         = mc_utils::isSneaking(player);
-    return inst.isEnabled(uuid, server::ServerConfig::KEY_ENABLE.data()) && inst.isEnabled(uuid, blockType)
-        && (!sneakingRequired || sneaking); // 如果要求下蹲，则必须下蹲；否则忽略
-#else
-    return true; // TODO: fix
-#endif
-}
-
-void MinerLauncher::prepareTask(MinerTaskContext ctx) {
-    auto& block = ctx.blockSource.getBlock(ctx.tiggerPos);
-    if (!block.isAir()) {
-        FM_TRACE("block is not air");
-        return; // 方块不是空气代表着玩家没有破坏它
-    }
-    auto& itemStack = ctx.player.getSelectedItem();
-
-    int& limit = ctx.limit;
-    limit      = ctx.rtConfig->rawConfig_.limit.value_or(0);
-    if (!miner_util::hasUnbreakable(itemStack) && itemStack.isDamageableItem()) {
-        auto item = itemStack.getItem();
-        if (!item) {
-            FM_TRACE("item is null");
-            return; // 物品为空
-        }
-        limit = std::min(limit, item->getMaxDamage() - itemStack.getDamageValue() - 1); // 动态计算限制为物品保留1点耐久
-#ifdef LL_PLAT_S
-        if (ConfigBase::data.economy.enabled && ctx.rtConfig->rawConfig_.cost > 0) {
-            // 动态约束限制为玩家经济
-            limit = std::min(
-                limit,
-                static_cast<int>(
-                    FastMiner::getInstance().getEconomy().get(ctx.player.getUuid()) / ctx.rtConfig->rawConfig_.cost
-                )
-            );
-        }
-#endif
-    }
-    if (limit <= 1) {
-        FM_TRACE("limit <= 1");
-        return; // 限制为1或以下则不进行连锁
-    }
-    FM_TRACE("limit: " << limit);
-    FM_TRACE("Task preparation complete");
-
-    auto task = std::make_shared<MinerTask>(std::move(ctx), *impl->dispatcher);
-    impl->dispatcher->launch(task);
 }
 
 bool MinerLauncher::canDestroyBlockWithMcApi(Player& player, Block const& block) const {
@@ -198,18 +125,43 @@ bool MinerLauncher::canDestroyBlockWithMcApi(Player& player, Block const& block)
     return player.canDestroyBlock(block) || mc_utils::CanDestroyBlock(player.getSelectedItem(), block)
         || mc_utils::CanDestroySpecial(player.getSelectedItem(), block);
 }
-bool MinerLauncher::canDestroyBlockWithConfig(Player& player, RuntimeBlockConfig::Ptr const& rtConfig) {
-#ifdef LL_PLAT_S
-    bool const  hasSilkTouch = EnchantUtils::hasEnchant(Enchant::Type::SilkTouch, player.getSelectedItem());
-    auto const& config       = rtConfig->rawConfig_;
-    return (config.tools.empty() || config.tools.contains(player.getSelectedItem().getTypeName())
-           )                                                                            /* 不限制工具 / 工具类型匹配 */
-        && (config.silkTouchMode == server::SilkTouchMode::Unlimited                    /* 不限制精准附魔 */
-            || (config.silkTouchMode == server::SilkTouchMode::Forbid && !hasSilkTouch) /* 禁止精准附魔 */
-            || (config.silkTouchMode == server::SilkTouchMode::Need && hasSilkTouch));  /* 需要精准附魔 */
-#else
-    return true; // TODO: fix
-#endif
+
+void MinerLauncher::prepareAndLaunchTask(MinerTaskContext ctx) {
+    auto& block = ctx.blockSource.getBlock(ctx.tiggerPos);
+    if (!block.isAir()) {
+        FM_TRACE("block is not air");
+        return; // 方块不是空气代表着玩家没有破坏它
+    }
+
+    int limit = calculateLimit(ctx);
+    if (limit <= 1) {
+        FM_TRACE("limit <= 1");
+        return; // 限制为1或以下则不进行连锁
+    }
+    ctx.limit = limit;
+
+    FM_TRACE("limit: " << limit);
+    FM_TRACE("Task preparation complete");
+
+    auto task = std::make_shared<MinerTask>(std::move(ctx), *impl->dispatcher);
+    impl->dispatcher->launch(task);
 }
+
+int MinerLauncher::calculateLimit(MinerTaskContext const& ctx) { return calculateDurabilityLimit(ctx); }
+
+int MinerLauncher::calculateDurabilityLimit(MinerTaskContext const& ctx) const {
+    int limit = ctx.rtConfig->limit.value_or(0);
+
+    auto& itemStack = ctx.player.getSelectedItem();
+    if (!miner_util::hasUnbreakable(itemStack) && itemStack.isDamageableItem()) {
+        if (auto item = itemStack.getItem()) {
+            int maxDurability = item->getMaxDamage() - itemStack.getDamageValue() - 1; // 对工具保留1点耐久
+            // 取两者的较小值
+            limit = std::min(limit, maxDurability);
+        }
+    }
+    return limit;
+}
+
 
 } // namespace fm
