@@ -143,9 +143,11 @@ void MinerLauncher::prepareAndLaunchTask(MinerTaskContext ctx) {
     FM_TRACE("limit: " << limit);
     FM_TRACE("Task preparation complete");
 
-    auto task = std::make_shared<MinerTask>(std::move(ctx), *impl->dispatcher);
+    auto task = std::make_shared<MinerTask>(std::move(ctx), *impl->dispatcher, getNotifyFinishedHook(ctx));
     impl->dispatcher->launch(task);
 }
+
+MinerTask::NotifyFinishedHook MinerLauncher::getNotifyFinishedHook(MinerTaskContext const& ctx) { return nullptr; }
 
 int MinerLauncher::calculateLimit(MinerTaskContext const& ctx) { return calculateDurabilityLimit(ctx); }
 

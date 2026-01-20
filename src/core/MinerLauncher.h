@@ -1,5 +1,6 @@
 #pragma once
 #include "Global.h"
+#include "MinerTask.h"
 #include "core/MinerTaskContext.h"
 
 #include "ll/api/event/player/PlayerDestroyBlockEvent.h"
@@ -28,6 +29,8 @@ public:
     virtual bool isMinerEnabled(Player& player, std::string const& blockType) = 0;
 
     virtual bool canDestroyBlockWithConfig(Player& player, RuntimeBlockConfig::Ptr const& rtConfig) = 0;
+
+    virtual MinerTask::NotifyFinishedHook getNotifyFinishedHook(MinerTaskContext const& ctx);
 
     virtual int calculateLimit(MinerTaskContext const& ctx);
 

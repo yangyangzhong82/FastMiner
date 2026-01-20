@@ -50,8 +50,22 @@ bool ServerMinerLauncher::canDestroyBlockWithConfig(Player& player, const Runtim
     }
     return false;
 }
-
-
+MinerTask::NotifyFinishedHook ServerMinerLauncher::getNotifyFinishedHook(MinerTaskContext const& ctx) {
+    return [](MinerTask const& task, long long cpuTime) {
+        auto cost = task.blockConfig_->rawConfig_.cost * (task.count_ - 1);
+        FastMiner::getInstance().getPlatformService().as<ServerPlatformService>().getEconomy().reduce(
+            task.player_.getUuid(),
+            cost
+        );
+        mc_utils::sendText(
+            task.player_,
+            "本次连锁了 {} 个方块, 消耗了 {} 点耐久, 总耗时 {}ms",
+            task.count_,
+            task.deductDamage_,
+            cpuTime
+        );
+    };
+}
 int ServerMinerLauncher::calculateLimit(const MinerTaskContext& ctx) {
     int limit = MinerLauncher::calculateLimit(ctx);
     if (ServerConfig::data.economy.enabled && ctx.rtConfig->rawConfig_.cost > 0) {
@@ -59,7 +73,10 @@ int ServerMinerLauncher::calculateLimit(const MinerTaskContext& ctx) {
         limit = std::min(
             limit,
             static_cast<int>(
-                FastMiner::getInstance().getEconomy().get(ctx.player.getUuid()) / ctx.rtConfig->rawConfig_.cost
+                FastMiner::getInstance().getPlatformService().as<ServerPlatformService>().getEconomy().get(
+                    ctx.player.getUuid()
+                )
+                / ctx.rtConfig->rawConfig_.cost
             )
         );
     }

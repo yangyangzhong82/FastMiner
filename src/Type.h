@@ -15,6 +15,8 @@ struct ConfigFactoryTag;
 
 struct MinerLauncherTag;
 
+struct PlatformServiceTag;
+
 } // namespace tag
 
 namespace internal {

@@ -270,7 +270,7 @@ void ServerConfig::addBlockConfig(std::string const& blockType, BlockConfig conf
     auto result = data.blocks.emplace(blockType, std::move(config));
     if (result.second) {
         save();
-        if (auto ptr = _buildRuntimeBlockConfig(result.first->second)) {
+        if (auto ptr = buildRuntimeBlockConfig(result.first->second)) {
             runtimeConfigMap.emplace(getBlockIdCached(blockType), ptr);
         }
     }

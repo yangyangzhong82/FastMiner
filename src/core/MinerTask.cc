@@ -70,7 +70,7 @@ inline static std::vector<MinerTask::Direction> CubeDirections = {
 };
 
 
-MinerTask::MinerTask(MinerTaskContext ctx, MinerDispatcher& dispatcher)
+MinerTask::MinerTask(MinerTaskContext ctx, MinerDispatcher& dispatcher, NotifyFinishedHook finishedHook)
 : player_(ctx.player),
   tool_(const_cast<ItemStack&>(player_.getSelectedItem())),
   blockId_(ctx.blockId),
@@ -84,7 +84,8 @@ MinerTask::MinerTask(MinerTaskContext ctx, MinerDispatcher& dispatcher)
   blockChangeCtx_(ActorChangeContext{&player_}),
   eventBus_(ll::event::EventBus::getInstance()),
   directions_(blockConfig_->rawConfig_.destroyMode == DestroyMode::Cube ? CubeDirections : AdjacentDirections),
-  dispatcher_(dispatcher) {}
+  dispatcher_(dispatcher),
+  notifyFinishedHook_(finishedHook) {}
 
 void MinerTask::execute() {
     queue_.reserve(limit_);
@@ -201,17 +202,9 @@ void MinerTask::notifyFinished(long long cpuTime) {
             player_.refreshInventory();
         }
 
-#ifdef LL_PLAT_S
-        auto cost = blockConfig_->rawConfig_.cost * (count_ - 1);
-        FastMiner::getInstance().getEconomy().reduce(player_.getUuid(), cost);
-        mc_utils::sendText(
-            player_,
-            "本次连锁了 {} 个方块, 消耗了 {} 点耐久, 总耗时 {}ms",
-            count_,
-            deductDamage_,
-            cpuTime
-        );
-#endif
+        if (notifyFinishedHook_) {
+            notifyFinishedHook_(*this, cpuTime);
+        }
 
         notifyClientBlockUpdate();
         state_ = State::Finished;

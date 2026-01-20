@@ -1,11 +1,11 @@
 #pragma once
 #include "ll/api/mod/NativeMod.h"
+
 #include <memory>
 
-#ifdef LL_PLAT_S
-#include "econbridge/IEconomy.h"
-#endif
+#include "Type.h"
 
+#include "trait/PlatformServiceTrait.h"
 
 namespace fm {
 
@@ -27,9 +27,10 @@ public:
 
     bool unload();
 
-#ifdef LL_PLAT_S
-    [[nodiscard]] econbridge::IEconomy& getEconomy() const;
-#endif
+    using PlatformServiceImpl = internal::ImplType<tag::PlatformServiceTag>::type;
+    PlatformServiceImpl& getPlatformService() const;
+
+    static_assert(std::is_final_v<PlatformServiceImpl>, "PlatformServiceImpl must be final");
 
 private:
     struct Impl;

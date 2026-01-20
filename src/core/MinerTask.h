@@ -71,10 +71,13 @@ struct MinerTask {
     int deductDamage_{0}; // 扣除的耐久度
     int quota_{0};        // 任务执行次数配额
 
+    using NotifyFinishedHook = std::function<void(MinerTask const& task, long long cpuTime)>;
+    NotifyFinishedHook notifyFinishedHook_{nullptr};
+
     FM_DISABLE_COPY(MinerTask);
     using Ptr = std::shared_ptr<MinerTask>;
 
-    explicit MinerTask(MinerTaskContext ctx, MinerDispatcher& dispatcher);
+    explicit MinerTask(MinerTaskContext ctx, MinerDispatcher& dispatcher, NotifyFinishedHook finishedHook = nullptr);
 
     void execute();
     void tryBreakBlock(QueueElement const& element);
