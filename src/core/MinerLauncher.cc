@@ -21,7 +21,9 @@
 #include "mc/world/level/BlockSource.h"
 #include "mc/world/level/block/Block.h"
 
+#include <algorithm>
 #include <atomic>
+#include <limits>
 #include <memory>
 #include <utility>
 
@@ -152,17 +154,27 @@ MinerTask::NotifyFinishedHook MinerLauncher::getNotifyFinishedHook(MinerTaskCont
 int MinerLauncher::calculateLimit(MinerTaskContext const& ctx) { return calculateDurabilityLimit(ctx); }
 
 int MinerLauncher::calculateDurabilityLimit(MinerTaskContext const& ctx) const {
-    int limit = ctx.rtConfig->limit.value_or(0);
+    constexpr int UNLIMITED  = std::numeric_limits<int>::max();
+    constexpr int SAFETY_CAP = 1024;
 
+    int configLimit = ctx.rtConfig->limit.value_or(UNLIMITED);
+
+    int   toolLimit = UNLIMITED;
     auto& itemStack = ctx.player.getSelectedItem();
-    if (!miner_util::hasUnbreakable(itemStack) && itemStack.isDamageableItem()) {
+
+    // 物品会损耗，且没有不可破坏属性时 => 计算耐久
+    if (itemStack.isDamageableItem() && !miner_util::hasUnbreakable(itemStack)) {
         if (auto item = itemStack.getItem()) {
-            int maxDurability = item->getMaxDamage() - itemStack.getDamageValue() - 1; // 对工具保留1点耐久
-            // 取两者的较小值
-            limit = std::min(limit, maxDurability);
+            // 保留 1 点耐久不爆
+            int remaining = item->getMaxDamage() - itemStack.getDamageValue() - 1;
+            toolLimit     = std::max(0, remaining);
         }
     }
-    return limit;
+    int finalLimit = std::min(configLimit, toolLimit);
+    if (finalLimit == UNLIMITED) {
+        return SAFETY_CAP; // 防止连锁爆炸
+    }
+    return finalLimit;
 }
 
 
