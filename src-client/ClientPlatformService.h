@@ -16,6 +16,8 @@ public:
 
     bool init() override;
     bool destroy() override;
+
+    bool isKeyActivated() const;
 };
 
 } // namespace client
