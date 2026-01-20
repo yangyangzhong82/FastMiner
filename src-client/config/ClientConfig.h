@@ -7,7 +7,9 @@ class ClientConfig final : public ConfigBase {
 public:
     void load() override;
     void save() override;
-    void buildRuntimeConfigMap() override;
+    void buildDefaultConfig() override;
+
+    std::shared_ptr<RuntimeBlockConfig> buildRuntimeBlockConfig(BlockConfig const& config) override;
 };
 
 } // namespace fm::client

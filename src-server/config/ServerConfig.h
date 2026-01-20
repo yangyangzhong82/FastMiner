@@ -9,11 +9,10 @@ class ServerConfig final : public ConfigBase, public IServerPlayerConfig {
 public:
     void load() override;
     void save() override;
-    void buildRuntimeConfigMap() override;
 
-    static void _buildDefaultConfig();
+    void buildDefaultConfig() override;
 
-    static std::shared_ptr<RuntimeBlockConfig> _buildRuntimeBlockConfig(BlockConfig const& config);
+    std::shared_ptr<RuntimeBlockConfig> buildRuntimeBlockConfig(BlockConfig const& config) override;
 
 public: /* GUI */
     void addTool(std::string const& blockType, std::string const& toolType);

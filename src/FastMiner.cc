@@ -71,7 +71,9 @@ bool FastMiner::load() { return true; }
 
 bool FastMiner::enable() {
     auto& instance = ConfigFactory::getInstance();
+    instance.buildDefaultConfig();
     instance.load();
+    instance.buildRuntimeConfigMap();
 
 #ifdef LL_PLAT_S
     FastMinerCommand::setup();

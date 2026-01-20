@@ -20,6 +20,14 @@ static_assert(RequireField<ConfigBase::ConfigModel>);
 
 ConfigBase::~ConfigBase() = default;
 
+void ConfigBase::buildRuntimeConfigMap() {
+    runtimeConfigMap.clear();
+    for (auto const& [key, value] : data.blocks) {
+        auto blockId = getBlockIdCached(key);
+        runtimeConfigMap.emplace(blockId, std::move(buildRuntimeBlockConfig(value)));
+    }
+}
+
 short ConfigBase::getBlockIdCached(std::string const& blockType) {
     auto iter = blockIDCacheMap.find(blockType);
     if (iter == blockIDCacheMap.end()) {

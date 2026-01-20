@@ -24,7 +24,11 @@ struct ConfigBase {
     virtual void load() = 0;
     virtual void save() = 0;
 
-    virtual void buildRuntimeConfigMap() = 0;
+    virtual void buildDefaultConfig() = 0;
+    void         buildRuntimeConfigMap();
+
+    using BlockConfigImpl = typename internal::ImplType<tag::BlockConfigTag>::type;
+    virtual std::shared_ptr<RuntimeBlockConfig> buildRuntimeBlockConfig(BlockConfigImpl const& config) = 0;
 
     inline static DispatcherConfig const& getDispatcherConfig() { return data.dispatcher; }
 

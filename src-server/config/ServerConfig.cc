@@ -17,15 +17,11 @@ namespace fm {
 namespace server {
 
 void ServerConfig::load() {
-    _buildDefaultConfig();
-
     auto path = FastMiner::getInstance().getSelf().getModDir() / "Config.json";
     if (!std::filesystem::exists(path) || !ll::config::loadConfig(data, path)) {
         save();
     }
-
     loadPlayerConfig();
-    buildRuntimeConfigMap();
 }
 
 void ServerConfig::save() {
@@ -34,15 +30,7 @@ void ServerConfig::save() {
     savePlayerConfig();
 }
 
-void ServerConfig::buildRuntimeConfigMap() {
-    data.blocks.clear();
-    for (auto const& [key, value] : data.blocks) {
-        auto blockId = getBlockIdCached(key);
-        runtimeConfigMap.emplace(blockId, std::move(_buildRuntimeBlockConfig(value)));
-    }
-}
-
-void ServerConfig::_buildDefaultConfig() {
+void ServerConfig::buildDefaultConfig() {
     std::unordered_set<std::string> MinecraftAxeTools = {
         VanillaItemNames::WoodenAxe(),
         VanillaItemNames::StoneAxe(),
@@ -52,6 +40,7 @@ void ServerConfig::_buildDefaultConfig() {
         VanillaItemNames::NetheriteAxe()
     };
 
+    data.blocks.clear();
     data.blocks = {
         // clang-format off
         // 树木类
@@ -211,7 +200,7 @@ void ServerConfig::_buildDefaultConfig() {
         // clang-format on
     };
 }
-std::shared_ptr<RuntimeBlockConfig> ServerConfig::_buildRuntimeBlockConfig(BlockConfig const& config) {
+std::shared_ptr<RuntimeBlockConfig> ServerConfig::buildRuntimeBlockConfig(BlockConfig const& config) {
     auto rtConfig   = std::make_shared<RuntimeBlockConfig>(config);
     rtConfig->limit = config.limit;
     rtConfig->similarBlock_.reserve(config.similarBlock.size());
