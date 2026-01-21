@@ -41,24 +41,29 @@ void MinerDispatcher::interruptPlayerTask(Player& player) {
 void MinerDispatcher::onTaskFinished(MinerTask* task) { tasks_.erase(task->player_.getUuid()); }
 
 void MinerDispatcher::tick() {
-    if (tasks_.empty()) return;
+    static constexpr int Burst = 64; // 单次最大突发量(Burst)
 
-    auto const& cfg         = ConfigBase::getDispatcherConfig();
-    int const&  globalLimit = cfg.globalBlockLimitPerTick;
-    int const&  maxResume   = cfg.maxResumeTasksPerTick;
+    auto const& cfg = ConfigBase::getDispatcherConfig();
 
-    int activeCount  = static_cast<int>(tasks_.size());
-    int quotaPerTask = std::max(1, globalLimit / std::max(1, activeCount));
+    int remainingQuota = cfg.globalBlockLimitPerTick;
+    int maxResume      = cfg.maxResumeTasksPerTick;
 
     int resumed = 0;
-    for (size_t i = 0; i < pending_.size() && resumed < maxResume; ++i) {
+    for (size_t i = 0; i < pending_.size(); ++i) {
+        if (resumed >= maxResume || remainingQuota <= 0) {
+            break;
+        }
+
         auto& p = pending_[i];
         if (p.task->canContinue()) {
-            // 分配额度并恢复协程
-            p.task->quota_ += quotaPerTask;
+            int grant = std::min(remainingQuota, Burst);
+
+            p.task->quota_ += grant;
+            remainingQuota -= grant;
+
             p.h.resume();
+            resumed++;
         }
-        resumed++;
     }
     // 清理已恢复的协程
     pending_.erase(pending_.begin(), pending_.begin() + resumed);
