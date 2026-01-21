@@ -151,13 +151,9 @@ void MinerTask::tryBreakBlock(QueueElement const& element) {
 
     count_++; // 累计破坏方块数量
     block.playerDestroy(player_, pos);
-#ifdef LL_PLAT_C
-    // TODO: 客户端目标如果使用 setBlock(..., 0, ...) 会出现方块更新异常，暂时同步更改方块
-    blockSource_.removeBlock(pos, blockChangeCtx_);
-#else
+    // blockSource_.removeBlock(pos, blockChangeCtx_);
     static auto& air = BlockTypeRegistry::get().getDefaultBlockState("minecraft:air");
     blockSource_.setBlock(pos, air, 2, nullptr, blockChangeCtx_);
-#endif
 }
 
 
@@ -210,19 +206,16 @@ void MinerTask::notifyFinished(long long cpuTime) {
             notifyFinishedHook_(*this, cpuTime);
         }
 
-#ifdef LL_PLAT_S
         notifyClientBlockUpdate();
-#endif
         state_ = State::Finished;
         dispatcher_.onTaskFinished(this);
         co_return;
     }).launch(ll::thread::ServerThreadExecutor::getDefault());
 }
 
-#ifdef LL_PLAT_S
-// TODO: 客户端目标方块更新异常
 void MinerTask::notifyClientBlockUpdate() {
     // 任务已完成，可以把资源转移走
+    // 对于 Client Side，MinerLauncher 拦截了客户端本地请求，所以这里是服务端侧资源，向客户端更新
     ll::coro::keepThis([queue = std::move(queue_), &bs = blockSource_]() -> ll::coro::CoroTask<> {
         co_await ll::chrono::ticks{1};
         for (auto const& [pos, _] : queue) {
@@ -231,7 +224,6 @@ void MinerTask::notifyClientBlockUpdate() {
         co_return;
     }).launch(ll::thread::ServerThreadExecutor::getDefault());
 }
-#endif
 
 void MinerTask::interrupt() { state_ = State::Interrupted; }
 bool MinerTask::isInterrupted() const { return state_ == State::Interrupted; }

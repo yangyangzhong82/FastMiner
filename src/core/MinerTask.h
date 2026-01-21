@@ -84,10 +84,7 @@ struct MinerTask {
     void calculateDurabilityDeduction();
     void searchAdjacentBlocks(QueueElement const& element);
     void notifyFinished(long long cpuTime);
-
-#ifdef LL_PLAT_S
     void notifyClientBlockUpdate(); // 通知客户端方块更新
-#endif
 
     void interrupt();
     bool isInterrupted() const;
