@@ -259,6 +259,7 @@ void ServerConfig::updateBlockConfig(std::string const& oldType, std::string con
 
         if (auto ptr = getRuntimeBlockConfig(oldType)) {
             ptr->rawConfig_ = iter->second;
+            ptr->limit      = iter->second.limit;
         }
         return;
     }
