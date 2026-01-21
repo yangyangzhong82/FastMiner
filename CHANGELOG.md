@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.0-rc.1] - 2026-01-21
+
+- 重写项目架构，新增客户端支持
+
 ## [0.13.0-rc.3] - 2025-11-28
 
 - 重写部分代码, 优化性能, 修复特殊情况下可能的崩溃 #7
