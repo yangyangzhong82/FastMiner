@@ -17,6 +17,7 @@ struct ServerPlatformService::Impl {
     void initEconomy() {
         if (!ServerConfig::data.economy.enabled) {
             mEconomy = std::make_unique<econbridge::detail::NullEconomy>();
+            return;
         }
         switch (ServerConfig::data.economy.kit) {
         case ServerConfig::ConfigModel::EconomyConfig::EconomyKit::LegacyMoney:
