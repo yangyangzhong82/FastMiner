@@ -1,11 +1,10 @@
 #include "MinerTask.h"
-#include "McUtils.h"
-#include "config/Config.h"
+#include "FastMiner.h"
 #include "core/MinerDispatcher.h"
 #include "core/MinerPermitAwaiter.h"
 #include "core/MinerTaskContext.h"
 #include "core/MinerUtil.h"
-#include "economy/EconomySystem.h"
+#include "utils/McUtils.h"
 
 #include "ll/api/chrono/GameChrono.h"
 #include "ll/api/coro/CoroTask.h"
@@ -71,21 +70,22 @@ inline static std::vector<MinerTask::Direction> CubeDirections = {
 };
 
 
-MinerTask::MinerTask(MinerTaskContext ctx, MinerDispatcher& dispatcher)
+MinerTask::MinerTask(MinerTaskContext ctx, MinerDispatcher& dispatcher, NotifyFinishedHook finishedHook)
 : player_(ctx.player),
   tool_(const_cast<ItemStack&>(player_.getSelectedItem())),
   blockId_(ctx.blockId),
   startPos_(std::move(ctx.tiggerPos)),
-  hashedStartPos_(std::move(ctx.hashedPos)),
+  hashedStartPos_(ctx.hashedPos),
   blockConfig_(std::move(ctx.rtConfig)),
   blockSource_(ctx.blockSource),
-  limit_(std::move(ctx.limit)),
-  dimension_(std::move(ctx.tiggerDimid)),
+  limit_(ctx.limit),
+  dimension_(ctx.tiggerDimid),
   durability_(EnchantUtils::getEnchantLevel(::Enchant::Type::Unbreaking, tool_)),
   blockChangeCtx_(ActorChangeContext{&player_}),
   eventBus_(ll::event::EventBus::getInstance()),
-  directions_(blockConfig_->rawConfig_.destroyMode == Config::DestroyMode::Cube ? CubeDirections : AdjacentDirections),
-  dispatcher_(dispatcher) {}
+  directions_(blockConfig_->rawConfig_.destroyMode == DestroyMode::Cube ? CubeDirections : AdjacentDirections),
+  dispatcher_(dispatcher),
+  notifyFinishedHook_(finishedHook) {}
 
 void MinerTask::execute() {
     queue_.reserve(limit_);
@@ -151,7 +151,7 @@ void MinerTask::tryBreakBlock(QueueElement const& element) {
 
     count_++; // 累计破坏方块数量
     block.playerDestroy(player_, pos);
-    // blockSource.removeBlock(pos, ctx);
+    // blockSource_.removeBlock(pos, blockChangeCtx_);
     static auto& air = BlockTypeRegistry::get().getDefaultBlockState("minecraft:air");
     blockSource_.setBlock(pos, air, 2, nullptr, blockChangeCtx_);
 }
@@ -160,13 +160,21 @@ void MinerTask::tryBreakBlock(QueueElement const& element) {
 void MinerTask::calculateDurabilityDeduction() {
     if (durability_ == 0) {
         deductDamage_ = count_; // 无耐久附魔，按照破坏数量扣除耐久
-    } else {
-        // TODO: 分离到其它线程进行计算?
-        int r = 100 / (durability_ + 1);
-        for (int i = 0; i < count_; ++i) {
-            if (ll::random_utils::rand<int>(0, 99) < r) deductDamage_++;
-        }
+        return;
     }
+    struct LeviRngAdapter {
+        using result_type = uint64_t;
+        static constexpr result_type min() { return 0; }
+        static constexpr result_type max() { return std::numeric_limits<uint64_t>::max(); }
+        result_type                  operator()() { return ll::random_utils::rand<uint64_t>(); }
+    } rng;
+
+    // 二项分布
+    double p = 1.0 / (static_cast<double>(durability_) + 1.0);
+
+    std::binomial_distribution<int> dist(count_, p);
+
+    deductDamage_ = dist(rng);
 }
 
 void MinerTask::searchAdjacentBlocks(QueueElement const& element) {
@@ -185,7 +193,7 @@ void MinerTask::searchAdjacentBlocks(QueueElement const& element) {
 }
 
 void MinerTask::notifyFinished(long long cpuTime) {
-    ll::coro::keepThis([this, ms = std::move(cpuTime)]() -> ll::coro::CoroTask<> {
+    ll::coro::keepThis([this, cpuTime]() -> ll::coro::CoroTask<> {
         co_await ll::chrono::ticks{1};
         calculateDurabilityDeduction();
         if (!miner_util::hasUnbreakable(tool_)) {
@@ -193,9 +201,11 @@ void MinerTask::notifyFinished(long long cpuTime) {
             tool_.setDamageValue(damage);
             player_.refreshInventory();
         }
-        auto cost = blockConfig_->rawConfig_.cost * (count_ - 1);
-        EconomySystem::getInstance()->reduce(player_, cost);
-        mc_utils::sendText(player_, "本次连锁了 {} 个方块, 消耗了 {} 点耐久, 总耗时 {}ms", count_, deductDamage_, ms);
+
+        if (notifyFinishedHook_) {
+            notifyFinishedHook_(*this, cpuTime);
+        }
+
         notifyClientBlockUpdate();
         state_ = State::Finished;
         dispatcher_.onTaskFinished(this);
@@ -205,6 +215,7 @@ void MinerTask::notifyFinished(long long cpuTime) {
 
 void MinerTask::notifyClientBlockUpdate() {
     // 任务已完成，可以把资源转移走
+    // 对于 Client Side，MinerLauncher 拦截了客户端本地请求，所以这里是服务端侧资源，向客户端更新
     ll::coro::keepThis([queue = std::move(queue_), &bs = blockSource_]() -> ll::coro::CoroTask<> {
         co_await ll::chrono::ticks{1};
         for (auto const& [pos, _] : queue) {

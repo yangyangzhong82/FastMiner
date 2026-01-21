@@ -1,10 +1,11 @@
 #pragma once
 #include "ll/api/reflection/Deserialization.h"
 #include "ll/api/reflection/Serialization.h"
+
 #include "nlohmann/json.hpp"
 #include "nlohmann/json_fwd.hpp"
 
-namespace json_utils {
+namespace fm::json_utils {
 
 
 template <typename T>
@@ -50,4 +51,4 @@ inline void json2structTryPatch(J& json, T& obj, F&& fixer = merge_patch<T, J>) 
 }
 
 
-} // namespace json_utils
+} // namespace fm::json_utils

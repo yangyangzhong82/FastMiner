@@ -1,19 +1,18 @@
 add_rules("mode.debug", "mode.release")
 
 add_repositories("liteldev-repo https://github.com/LiteLDev/xmake-repo.git")
+add_repositories("iceblcokmc https://github.com/IceBlcokMC/xmake-repo.git")
 
--- add_requires("levilamina x.x.x") for a specific version
--- add_requires("levilamina develop") to use develop version
--- please note that you should add bdslibrary yourself if using dev version
 if is_config("target_type", "server") then
-    add_requires("levilamina 1.7.0", {configs = {target_type = "server"}})
+    add_requires("levilamina 1.8.0-rc.2", {configs = {target_type = "server"}})
+
+    add_requires("economy_bridge 0.1.0")
 else
-    add_requires("levilamina 1.0.0-rc.3", {configs = {target_type = "client"}})
+    add_requires("levilamina 1.8.0-rc.2", {configs = {target_type = "client"}})
 end
 
 add_requires("levibuildscript")
 add_requires("abseil 20250127.0")
-
 
 if not has_config("vs_runtime") then
     set_runtimes("MD")
@@ -48,6 +47,7 @@ target("FastMiner") -- Change this to your mod name.
     set_languages("c++20")
     set_symbols("debug")
     add_packages("abseil")
+    add_headerfiles("src/**.h")
 
     if is_mode("debug") then
         add_defines("DEBUG")
@@ -56,3 +56,16 @@ target("FastMiner") -- Change this to your mod name.
     if is_mode("release") then 
         set_optimize("fastest")
     end 
+
+    if is_config("target_type", "server") then
+        add_defines("LL_PLAT_S")
+        add_packages("economy_bridge")
+        add_files("src-server/**.cc")
+        add_includedirs("src-server")
+        add_headerfiles("src-server/**.h")
+    else
+        add_defines("LL_PLAT_C")
+        add_files("src-client/**.cc")
+        add_includedirs("src-client")
+        add_headerfiles("src-client/**.h")
+    end

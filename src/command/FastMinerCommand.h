@@ -1,10 +1,23 @@
 #pragma once
+#include "Type.h"
 
+#include "trait/CommandTrait.h"
 
-namespace fm::FastMinerCommand {
+namespace fm {
 
+struct FastMinerCommand {
+    FastMinerCommand() = delete;
 
-void setup();
+    inline static constexpr std::string_view CommandName        = "fm";
+    inline static constexpr std::string_view CommandDescription = "FastMiner - 连锁采集";
 
+    using Impl = typename internal::ImplType<tag::CommandTag>::type;
 
-} // namespace fm::FastMinerCommand
+    static_assert(requires {
+        { Impl::setup(CommandName, CommandDescription) } -> std::same_as<void>;
+    });
+
+    inline static void setup() { Impl::setup(CommandName, CommandDescription); }
+};
+
+} // namespace fm

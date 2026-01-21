@@ -1,11 +1,11 @@
 # FastMiner
 
-一个基于 Levilamina 的快速连锁采集 Mod(Plugin)。
+一个基于 Levilamina 的快速连锁采集 Mod，支持 Server 和 Client 双端运行。
 
 ## 🚀 性能测试
 
 > 测试环境均为: Windows 10 22H2 + 同时运行客户端和服务端  
-> 配置: i5-6300HQ @2.9Ghz + D4-8G-2133
+> 配置: i5-6300HQ@2.9Ghz + DDR4 8G 2133Mhz
 
 | 数量 | 耗时    | 平均         |
 | ---- | ------- | ------------ |
@@ -18,22 +18,60 @@
 
 > 🧩 2025.11.7 更新：重构后的调度系统性能测试 **100096** 个方块, 总耗时 **10606ms**, 平均 **0.10595ms/个**, 理论提升 22%🚀。
 
-## 安装
+## Client 端安装
 
 ```bash
-lip install github.com/engsr6982/fastminer
+lip install github.com/engsr6982/FastMiner#client
+```
+
+> Tip: 按住 V 键挖掘方块即可连锁(默认绑定 V 键，可在配置文件更改)
+
+### 命令
+
+- /fm 打开方块白名单配置 GUI
+
+### 配置文件
+
+```json
+{
+    "version": 1,
+    "dispatcher": {
+        "globalBlockLimitPerTick": 256, // 全局每刻连锁上线
+        "maxResumeTasksPerTick": 16 // 每刻恢复任务上限
+    },
+    "bindKey": 86, // 绑定按键 (Windows VK Code)
+    "blocks": { // 方块配置(白名单模式)，Key 填写方块命名空间
+      "minecraft:spruce_log": {
+        "name": "云杉木原木", // 方块名称
+        "destroyMode": "Default", // 破坏模式，支持: Default 和 Cube。 Default搜索相邻的6个面，Cube 3x3x3搜索
+        "similarBlock": [] // 相似方块，填写方块命名空间，连锁时会一起采集
+      },
+      "minecraft:birch_log": {
+        "name": "白桦木原木",
+        "limit": 200, // 最大连锁采集数量(可选字段)
+        "destroyMode": "Default",
+        "similarBlock": []
+      }
+    }
+}
+```
+
+## Server 端安装
+
+```bash
+lip install github.com/engsr6982/FastMiner
 ```
 
 > Tip：初次使用，需输入命令 /fm 打开 GUI，开启需要连锁的方块。
 
-## 命令
+### 命令
 
 - /fm 打开设置 GUI
 - /fm off 关闭连锁采集
 - /fm on 开启连锁采集
 - /fm manager 方块管理 GUI（OP）
 
-## 配置文件
+### 配置文件
 
 ```json
 {
