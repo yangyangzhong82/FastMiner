@@ -190,4 +190,67 @@ std::shared_ptr<RuntimeBlockConfig> ClientConfig::buildRuntimeBlockConfig(BlockC
     return rtConfig;
 }
 
+
+void ClientConfig::addSimilarBlock(std::string const& blockType, std::string const& similarBlockType) {
+    auto iter = data.blocks.find(blockType);
+    if (iter == data.blocks.end()) {
+        return;
+    }
+    if (iter->second.similarBlock.insert(similarBlockType).second) {
+        save();
+        if (auto ptr = getRuntimeBlockConfig(blockType)) {
+            ptr->similarBlock_.insert(getBlockIdCached(similarBlockType));
+        }
+    }
+}
+void ClientConfig::removeSimilarBlock(std::string const& blockType, std::string const& similarBlockType) {
+    auto iter = data.blocks.find(blockType);
+    if (iter == data.blocks.end()) {
+        return;
+    }
+    if (iter->second.similarBlock.erase(similarBlockType)) {
+        save();
+        if (auto ptr = getRuntimeBlockConfig(blockType)) {
+            ptr->similarBlock_.erase(getBlockIdCached(similarBlockType));
+        }
+    }
+}
+void ClientConfig::updateBlockConfig(std::string const& oldType, std::string const& newType, BlockConfig config) {
+    if (oldType == newType) {
+        auto iter = data.blocks.find(oldType);
+        if (iter == data.blocks.end()) {
+            return;
+        }
+        iter->second = std::move(config);
+        save();
+
+        if (auto ptr = getRuntimeBlockConfig(oldType)) {
+            ptr->rawConfig_ = iter->second;
+            ptr->limit      = iter->second.limit;
+        }
+        return;
+    }
+
+    removeBlockConfig(oldType);
+    addBlockConfig(newType, std::move(config));
+}
+void ClientConfig::addBlockConfig(std::string const& blockType, BlockConfig config) {
+    auto result = data.blocks.emplace(blockType, std::move(config));
+    if (result.second) {
+        save();
+        if (auto ptr = buildRuntimeBlockConfig(result.first->second)) {
+            runtimeConfigMap.emplace(getBlockIdCached(blockType), ptr);
+        }
+    }
+}
+void ClientConfig::removeBlockConfig(std::string const& blockType) {
+    auto iter = data.blocks.find(blockType);
+    if (iter == data.blocks.end()) {
+        return;
+    }
+    data.blocks.erase(iter); // 擦除旧元素
+    save();
+    runtimeConfigMap.erase(getBlockIdCached(blockType));
+}
+
 } // namespace fm::client
