@@ -1,5 +1,6 @@
 #pragma once
 #include "core/MinerLauncher.h"
+#include "absl/container/flat_hash_set.h"
 #include "config/ConfigFactory.h"
 #include "core/MinerDispatcher.h"
 #include "core/MinerTask.h"
@@ -25,6 +26,7 @@
 #include <atomic>
 #include <limits>
 #include <memory>
+#include <mutex>
 #include <utility>
 
 namespace fm {
@@ -35,6 +37,9 @@ struct MinerLauncher::Impl {
     ll::event::ListenerPtr           playerDisconnectListener;
     std::atomic<bool>                abort; // 是否需要中止
     ll::coro::InterruptableSleep     sleep; // 中断等待
+
+    absl::flat_hash_set<HashedDimPos> preparingTasks_;      // 准备中的任务
+    std::mutex                        preparingTasksMutex_; // 准备中的任务锁
 };
 
 MinerLauncher::MinerLauncher() : impl(std::make_unique<Impl>()) {
@@ -106,18 +111,31 @@ void MinerLauncher::onPlayerDestroyBlock(ll::event::PlayerDestroyBlockEvent& ev)
         return; // 玩家无法破坏该方块
     }
 
+    { // 防御代码：Client Side PlayerDestroyBlockEvent 会触发两次
+        std::lock_guard<std::mutex> lock(impl->preparingTasksMutex_);
+        if (impl->preparingTasks_.contains(hashedPos)) {
+            FM_TRACE("Duplicate event ignored: " << rawPos.toString()); // 重复事件忽略
+            return;
+        }
+        impl->preparingTasks_.insert(hashedPos);
+    }
+
     MinerTaskContext ctx{
         .player      = player,
         .blockId     = block.getBlockItemId(),
         .tiggerPos   = rawPos,
         .tiggerDimid = dimId,
-        .hashedPos   = std::move(hashedPos),
+        .hashedPos   = hashedPos,
         .blockSource = blockSource,
         .rtConfig    = std::move(rtConfig)
     };
-    ll::coro::keepThis([this, ctx = std::move(ctx)]() -> ll::coro::CoroTask<> {
+    ll::coro::keepThis([this, ctx = std::move(ctx), hashedPos]() -> ll::coro::CoroTask<> {
         co_await ll::chrono::ticks{1};
         this->prepareAndLaunchTask(std::move(ctx));
+        {
+            std::lock_guard<std::mutex> lock(impl->preparingTasksMutex_);
+            impl->preparingTasks_.erase(hashedPos);
+        }
         co_return;
     }).launch(ll::thread::ServerThreadExecutor::getDefault());
 }
