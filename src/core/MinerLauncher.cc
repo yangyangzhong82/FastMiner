@@ -37,9 +37,6 @@ struct MinerLauncher::Impl {
     ll::event::ListenerPtr           playerDisconnectListener;
     std::atomic<bool>                abort; // 是否需要中止
     ll::coro::InterruptableSleep     sleep; // 中断等待
-
-    absl::flat_hash_set<HashedDimPos> preparingTasks_;      // 准备中的任务
-    std::mutex                        preparingTasksMutex_; // 准备中的任务锁
 };
 
 MinerLauncher::MinerLauncher() : impl(std::make_unique<Impl>()) {
@@ -80,6 +77,13 @@ void MinerLauncher::onPlayerDestroyBlock(ll::event::PlayerDestroyBlockEvent& ev)
     auto& player = ev.self();
     auto  dimId  = player.getDimensionId();
 
+    // 对于本地主机玩家，忽略本地事件，因为本地事件的 BlockSource 没有权限破坏方块
+    // TODO: 对于本地联机、加入服务器，需要特殊处理，向服务端请求
+    if (player.isClientSide()) {
+        FM_TRACE("Client side player destroy block event ignored");
+        return;
+    }
+
     auto hashedPos = miner_util::hashDimensionPosition(rawPos, dimId);
     if (ev.isCancelled() || impl->dispatcher->isProcessing(hashedPos)) {
         FM_TRACE("event cancelled or processing");
@@ -111,15 +115,6 @@ void MinerLauncher::onPlayerDestroyBlock(ll::event::PlayerDestroyBlockEvent& ev)
         return; // 玩家无法破坏该方块
     }
 
-    { // 防御代码：Client Side PlayerDestroyBlockEvent 会触发两次
-        std::lock_guard<std::mutex> lock(impl->preparingTasksMutex_);
-        if (impl->preparingTasks_.contains(hashedPos)) {
-            FM_TRACE("Duplicate event ignored: " << rawPos.toString()); // 重复事件忽略
-            return;
-        }
-        impl->preparingTasks_.insert(hashedPos);
-    }
-
     MinerTaskContext ctx{
         .player      = player,
         .blockId     = block.getBlockItemId(),
@@ -129,13 +124,9 @@ void MinerLauncher::onPlayerDestroyBlock(ll::event::PlayerDestroyBlockEvent& ev)
         .blockSource = blockSource,
         .rtConfig    = std::move(rtConfig)
     };
-    ll::coro::keepThis([this, ctx = std::move(ctx), hashedPos]() -> ll::coro::CoroTask<> {
+    ll::coro::keepThis([this, ctx = std::move(ctx)]() -> ll::coro::CoroTask<> {
         co_await ll::chrono::ticks{1};
         this->prepareAndLaunchTask(std::move(ctx));
-        {
-            std::lock_guard<std::mutex> lock(impl->preparingTasksMutex_);
-            impl->preparingTasks_.erase(hashedPos);
-        }
         co_return;
     }).launch(ll::thread::ServerThreadExecutor::getDefault());
 }
