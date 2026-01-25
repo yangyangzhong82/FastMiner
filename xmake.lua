@@ -4,11 +4,11 @@ add_repositories("liteldev-repo https://github.com/LiteLDev/xmake-repo.git")
 add_repositories("iceblcokmc https://github.com/IceBlcokMC/xmake-repo.git")
 
 if is_config("target_type", "server") then
-    add_requires("levilamina 1.8.0-rc.2", {configs = {target_type = "server"}})
+    add_requires("levilamina 1.9.0", {configs = {target_type = "server"}})
 
-    add_requires("economy_bridge 0.1.0")
+    add_requires("economy_bridge 0.2.0")
 else
-    add_requires("levilamina 1.8.0-rc.2", {configs = {target_type = "client"}})
+    add_requires("levilamina 1.9.0", {configs = {target_type = "client"}})
 end
 
 add_requires("levibuildscript")

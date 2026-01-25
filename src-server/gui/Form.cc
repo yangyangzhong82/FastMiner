@@ -58,9 +58,8 @@ void __sendEditBlockTools(Player& player, std::string const& typeName) {
     });
     f.appendDivider();
     for (auto const& tool : tools) {
-        ItemStack item{tool};
         f.appendButton(
-            fmt::format("{}\n点击移除工具", item.isNull() ? tool : item.getName()),
+            fmt::format("{}\n点击移除工具", tool),
             [tool, typeName]([[maybe_unused]] Player& pl) {
                 ConfigFactory::getInstance().as<ServerConfig>().removeTool(typeName, tool);
                 __sendEditBlockTools(pl, typeName);
@@ -88,14 +87,10 @@ void __sendEditSimilarBlock(Player& player, std::string const& typeName) {
     });
     f.appendDivider();
     for (auto const& similar : similarBlock) {
-        ItemStack item{similar};
-        f.appendButton(
-            fmt::format("{}\n点击移除方块", item.isNull() && !item.isBlock() ? similar : item.getName()),
-            [similar, typeName]([[maybe_unused]] Player& pl) {
-                ConfigFactory::getInstance().as<ServerConfig>().removeSimilarBlock(typeName, similar);
-                __sendEditSimilarBlock(pl, typeName);
-            }
-        );
+        f.appendButton(fmt::format("{}\n点击移除方块", similar), [similar, typeName]([[maybe_unused]] Player& pl) {
+            ConfigFactory::getInstance().as<ServerConfig>().removeSimilarBlock(typeName, similar);
+            __sendEditSimilarBlock(pl, typeName);
+        });
     }
     f.sendTo(player);
 }

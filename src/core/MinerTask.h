@@ -48,7 +48,7 @@ struct MinerTask {
     State                   state_{State::Pending}; // 任务状态
     Player&                 player_;                // 执行任务的玩家
     ItemStack&              tool_;                  // 使用的工具
-    short const             blockId_;               // 方块 Id
+    unsigned short const    blockId_;               // 方块 Id
     BlockPos const          startPos_;              // 任务起始位置
     HashedDimPos const      hashedStartPos_;        // 任务起始位置的哈希值
     RuntimeBlockConfig::Ptr blockConfig_;           // 方块配置

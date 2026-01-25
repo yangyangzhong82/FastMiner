@@ -75,14 +75,10 @@ void ClientGUI::_sendEditSimilarBlock(Player& player, std::string const& typeNam
     });
     f.appendDivider();
     for (auto const& similar : similarBlock) {
-        ItemStack item{similar};
-        f.appendButton(
-            fmt::format("{}\n点击移除方块", item.isNull() && !item.isBlock() ? similar : item.getName()),
-            [similar, typeName]([[maybe_unused]] Player& pl) {
-                ConfigFactory::getInstance().as<ClientConfig>().removeSimilarBlock(typeName, similar);
-                _sendEditSimilarBlock(pl, typeName);
-            }
-        );
+        f.appendButton(fmt::format("{}\n点击移除方块", similar), [similar, typeName]([[maybe_unused]] Player& pl) {
+            ConfigFactory::getInstance().as<ClientConfig>().removeSimilarBlock(typeName, similar);
+            _sendEditSimilarBlock(pl, typeName);
+        });
     }
     f.sendTo(player);
 }

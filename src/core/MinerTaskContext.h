@@ -14,7 +14,7 @@ namespace fm {
  */
 struct MinerTaskContext {
     Player&                 player;      // 玩家对象
-    short const             blockId;     // 方块ID
+    unsigned short const    blockId;     // 方块ID
     BlockPos                tiggerPos;   // 触发位置
     int                     tiggerDimid; // 触发维度
     HashedDimPos            hashedPos;   // 触发位置的哈希值

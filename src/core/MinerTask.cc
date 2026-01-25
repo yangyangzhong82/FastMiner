@@ -27,6 +27,7 @@
 #include <cstddef>
 #include <vector>
 
+BlockChangeContext::BlockChangeContext() = default;
 
 namespace fm {
 
@@ -70,6 +71,7 @@ inline static std::vector<MinerTask::Direction> CubeDirections = {
 };
 
 
+
 MinerTask::MinerTask(MinerTaskContext ctx, MinerDispatcher& dispatcher, NotifyFinishedHook finishedHook)
 : player_(ctx.player),
   tool_(const_cast<ItemStack&>(player_.getSelectedItem())),
@@ -81,11 +83,13 @@ MinerTask::MinerTask(MinerTaskContext ctx, MinerDispatcher& dispatcher, NotifyFi
   limit_(ctx.limit),
   dimension_(ctx.tiggerDimid),
   durability_(EnchantUtils::getEnchantLevel(::Enchant::Type::Unbreaking, tool_)),
-  blockChangeCtx_(ActorChangeContext{&player_}),
+  //   blockChangeCtx_(ActorChangeContext{&player_}),
   eventBus_(ll::event::EventBus::getInstance()),
   directions_(blockConfig_->rawConfig_.destroyMode == DestroyMode::Cube ? CubeDirections : AdjacentDirections),
   dispatcher_(dispatcher),
-  notifyFinishedHook_(finishedHook) {}
+  notifyFinishedHook_(finishedHook) {
+    blockChangeCtx_.mContextSource = ActorChangeContext{&player_};
+}
 
 void MinerTask::execute() {
     queue_.reserve(limit_);
