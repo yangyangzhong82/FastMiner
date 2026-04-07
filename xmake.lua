@@ -7,11 +7,11 @@ if is_config("target_type", "server") then
     add_requires("levilamina 26.10.0", {configs = {target_type = "server"}})
 
     add_requires("economy_bridge 0.3.0")
+    add_requires("ll-bstats 0.3.0", {configs = {target_type = "server"}})
 else
     add_requires("levilamina 26.10.0", {configs = {target_type = "client"}})
+    add_requires("ll-bstats 0.3.0", {configs = {target_type = "client"}})
 end
-
-add_requires("ll-bstats 0.3.0")
 
 add_requires("levibuildscript")
 add_requires("abseil 20250127.0")
