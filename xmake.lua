@@ -51,6 +51,9 @@ target("FastMiner") -- Change this to your mod name.
     add_packages("abseil")
     add_headerfiles("src/**.h")
 
+    add_configfiles("BuildInfo.h.in")
+    set_configdir("src/")
+
     if is_mode("debug") then
         add_defines("DEBUG")
     end

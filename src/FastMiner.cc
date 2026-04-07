@@ -7,6 +7,11 @@
 
 #include <memory>
 
+#include "BuildInfo.h"
+#include "ll/api/thread/ThreadPoolExecutor.h"
+#include "telemetry/Telemetry.h"
+
+
 #include "trait/MinerLauncherTrait.h"
 
 namespace fm {
@@ -17,6 +22,9 @@ struct FastMiner::Impl {
     ll::mod::NativeMod&                  mSelf;
     std::unique_ptr<LauncherImpl>        mLauncher{nullptr};
     std::unique_ptr<PlatformServiceImpl> mPlatformService{nullptr};
+
+    std::unique_ptr<ll::thread::ThreadPoolExecutor> mThreadPoolExecutor{nullptr};
+    std::unique_ptr<Telemetry>                      mTelemetry{nullptr};
 
     Impl() : mSelf(*ll::mod::NativeMod::current()) {}
 };
@@ -43,11 +51,22 @@ bool FastMiner::enable() {
 
     mImpl->mLauncher = std::make_unique<LauncherImpl>();
 
+    mImpl->mThreadPoolExecutor = std::make_unique<ll::thread::ThreadPoolExecutor>("FastMiner", 1);
+    mImpl->mTelemetry          = std::make_unique<Telemetry>(30641, BuildInfo::Tag.data());
+    if (instance.isTelemetryEnabled()) {
+        mImpl->mTelemetry->launch(*mImpl->mThreadPoolExecutor);
+    }
+
     return true;
 }
 
 bool FastMiner::disable() {
     ConfigFactory::getInstance().save();
+
+    mImpl->mTelemetry->shutdown();
+    mImpl->mTelemetry.reset();
+    mImpl->mThreadPoolExecutor->destroy();
+    mImpl->mThreadPoolExecutor.reset();
 
     mImpl->mLauncher.reset();
     mImpl->mPlatformService->destroy();
