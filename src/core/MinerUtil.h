@@ -1,6 +1,6 @@
 #pragma once
-#include "mc/nbt/ByteTag.h"
-#include "mc/nbt/CompoundTag.h"
+#include "mc/deps/nbt/ByteTag.h"
+#include "mc/deps/nbt/CompoundTag.h"
 #include "mc/world/item/ItemStack.h"
 #include "mc/world/level/BlockPos.h"
 

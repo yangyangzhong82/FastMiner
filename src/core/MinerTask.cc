@@ -27,7 +27,7 @@
 #include <cstddef>
 #include <vector>
 
-BlockChangeContext::BlockChangeContext() = default;
+// BlockChangeContext::BlockChangeContext() = default;
 
 namespace fm {
 

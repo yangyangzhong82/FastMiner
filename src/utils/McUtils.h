@@ -4,6 +4,7 @@
 #include "ll/api/service/Bedrock.h"
 #include <ll/api/service/ServiceManager.h>
 
+#include "mc/common/SharedPtr.h"
 #include "mc/server/commands/CommandOutput.h"
 #include "mc/world/actor/player/Player.h"
 #include "mc/world/actor/provider/SynchedActorDataAccess.h"
@@ -23,6 +24,7 @@
 #include <mc/world/Minecraft.h>
 #include <mc/world/actor/player/Player.h>
 
+
 #include <algorithm>
 #include <memory>
 #include <string>
@@ -30,6 +32,13 @@
 
 namespace fm::mc_utils {
 
+
+inline bool isBlock(ItemStackBase const& itemst) {
+    auto item = itemst.mItem.lock();
+    if (!item) return false;
+    auto weak = item->mBlockType.get();
+    return weak.get() != nullptr;
+}
 
 // IDA: v1.21.0
 [[nodiscard]] inline bool isSneaking(Player& player) {

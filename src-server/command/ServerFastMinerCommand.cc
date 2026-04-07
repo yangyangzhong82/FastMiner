@@ -31,8 +31,8 @@
 #include "config/ConfigFactory.h"
 #include "magic_enum.hpp"
 
-#include "mc/nbt/ByteTag.h"
-#include "mc/nbt/CompoundTag.h"
+#include "mc/deps/nbt/ByteTag.h"
+#include "mc/deps/nbt/CompoundTag.h"
 #include "mc/platform/UUID.h"
 #include "mc/world/actor/player/Player.h"
 #include "mc/world/item/Item.h"

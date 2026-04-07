@@ -49,7 +49,7 @@ void __sendEditBlockTools(Player& player, std::string const& typeName) {
     });
     f.appendButton("添加手持工具", "textures/ui/color_plus", "path", [typeName](Player& pl) {
         auto const& item = pl.getSelectedItem();
-        if (item.isNull() || item.isBlock()) {
+        if (item.isNull() || mc_utils::isBlock(item)) {
             mc_utils::sendText<mc_utils::LogLevel::Error>(pl, "请手持一个工具!");
             return;
         }
@@ -58,13 +58,10 @@ void __sendEditBlockTools(Player& player, std::string const& typeName) {
     });
     f.appendDivider();
     for (auto const& tool : tools) {
-        f.appendButton(
-            fmt::format("{}\n点击移除工具", tool),
-            [tool, typeName]([[maybe_unused]] Player& pl) {
-                ConfigFactory::getInstance().as<ServerConfig>().removeTool(typeName, tool);
-                __sendEditBlockTools(pl, typeName);
-            }
-        );
+        f.appendButton(fmt::format("{}\n点击移除工具", tool), [tool, typeName]([[maybe_unused]] Player& pl) {
+            ConfigFactory::getInstance().as<ServerConfig>().removeTool(typeName, tool);
+            __sendEditBlockTools(pl, typeName);
+        });
     }
     f.sendTo(player);
 }
@@ -78,7 +75,7 @@ void __sendEditSimilarBlock(Player& player, std::string const& typeName) {
     });
     f.appendButton("添加手持方块", "textures/ui/color_plus", "path", [typeName](Player& pl) {
         auto const& item = pl.getSelectedItem();
-        if (item.isNull() || !item.isBlock()) {
+        if (item.isNull() || !mc_utils::isBlock(item)) {
             mc_utils::sendText<mc_utils::LogLevel::Error>(pl, "请手持一个方块!");
             return;
         }
@@ -133,7 +130,7 @@ void _addHandheldItemBlock(Player& player) {
         mc_utils::sendText<mc_utils::LogLevel::Error>(player, "请手持一个方块!");
     }
 
-    if (!item.isBlock()) {
+    if (!mc_utils::isBlock(item)) {
         mc_utils::sendText<mc_utils::LogLevel::Error>(player, "当前手持物品没有对应方块实例!");
         return;
     }
