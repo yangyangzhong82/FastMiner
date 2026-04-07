@@ -5,6 +5,10 @@
 
 #include <absl/container/flat_hash_map.h>
 
+#include <concepts>
+#include <type_traits>
+#include <utility>
+
 namespace fm {
 
 struct RuntimeBlockConfig;
@@ -30,7 +34,17 @@ struct ConfigBase {
     using BlockConfigImpl = typename internal::ImplType<tag::BlockConfigTag>::type;
     virtual std::shared_ptr<RuntimeBlockConfig> buildRuntimeBlockConfig(BlockConfigImpl const& config) = 0;
 
-    inline static DispatcherConfig const& getDispatcherConfig() { return data.dispatcher; }
+    inline static bool isTelemetryEnabled() {
+        static_assert(std::same_as<std::remove_cvref_t<decltype(std::declval<ConfigModel>().telemetry)>, bool>);
+        return data.telemetry;
+    }
+
+    inline static DispatcherConfig const& getDispatcherConfig() {
+        static_assert(
+            std::same_as<std::remove_cvref_t<decltype(std::declval<ConfigModel>().dispatcher)>, DispatcherConfig>
+        );
+        return data.dispatcher;
+    }
 
     static short                               getBlockIdCached(std::string const& blockType);
     static std::shared_ptr<RuntimeBlockConfig> getRuntimeBlockConfig(short blockId);

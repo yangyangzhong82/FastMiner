@@ -18,11 +18,13 @@ struct BlockConfig {
 using Blocks = std::unordered_map<std::string, BlockConfig>;
 
 struct ClientConfigModel {
-    static int constexpr SchemaVersion = 1;
+    static int constexpr SchemaVersion = 2;
 
     int version = SchemaVersion;
 
     DispatcherConfig dispatcher;
+
+    bool telemetry{true};
 
     int bindKey{86}; // Windows VK Codes
 

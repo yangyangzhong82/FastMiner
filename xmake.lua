@@ -43,7 +43,7 @@ target("FastMiner") -- Change this to your mod name.
     add_defines("NOMINMAX", "UNICODE", "PLUGIN_NAME=\"FastMiner\"")
     add_files("src/**.cc")
     add_includedirs("src")
-    add_packages("levilamina")
+    add_packages("levilamina", "ll-bstats")
     set_exceptions("none") -- To avoid conflicts with /EHa.
     set_kind("shared")
     set_languages("c++20")

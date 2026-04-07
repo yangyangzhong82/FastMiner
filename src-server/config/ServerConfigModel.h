@@ -29,11 +29,13 @@ struct BlockConfig {
 using Blocks = std::unordered_map<std::string, BlockConfig>;
 
 struct ServerConfigModel {
-    static constexpr int SchemaVersion = 7;
+    static constexpr int SchemaVersion = 8;
 
     int version = SchemaVersion;
 
     DispatcherConfig dispatcher;
+
+    bool telemetry{true};
 
     struct EconomyConfig {
         enum class EconomyKit { LegacyMoney, ScoreBoard };
