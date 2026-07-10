@@ -4,13 +4,13 @@ add_repositories("liteldev-repo https://github.com/LiteLDev/xmake-repo.git")
 add_repositories("iceblcokmc https://github.com/IceBlcokMC/xmake-repo.git")
 
 if is_config("target_type", "server") then
-    add_requires("levilamina 26.10.0", {configs = {target_type = "server"}})
+    add_requires("levilamina 26.20.0", {configs = {target_type = "server"}})
 
-    add_requires("economy_bridge 0.3.0")
-    add_requires("ll-bstats 0.3.0", {configs = {target_type = "server"}})
+    add_requires("economy_bridge 0.5.0")
+    add_requires("ll-bstats 0.4.0", {configs = {target_type = "server"}})
 else
-    add_requires("levilamina 26.10.0", {configs = {target_type = "client"}})
-    add_requires("ll-bstats 0.3.0", {configs = {target_type = "client"}})
+    add_requires("levilamina 26.20.0", {configs = {target_type = "client"}})
+    add_requires("ll-bstats 0.4.0", {configs = {target_type = "client"}})
 end
 
 add_requires("levibuildscript")
@@ -18,6 +18,10 @@ add_requires("abseil 20250127.0")
 
 if not has_config("vs_runtime") then
     set_runtimes("MD")
+end
+
+if is_plat("windows") then
+    set_toolchains("clang-cl") -- windows allways use clang-cl
 end
 
 option("target_type")
@@ -29,22 +33,28 @@ option_end()
 target("FastMiner") -- Change this to your mod name.
     add_rules("@levibuildscript/linkrule")
     add_rules("@levibuildscript/modpacker")
-    add_cxflags(
-        "/EHa",
-        "/utf-8",
-        "/W4",
-        "/w44265",
-        "/w44289",
-        "/w44296",
-        "/w45263",
-        "/w44738",
-        "/w45204"
-    )
-    add_defines("NOMINMAX", "UNICODE", "PLUGIN_NAME=\"FastMiner\"")
+    add_defines("PLUGIN_NAME=\"FastMiner\"")
+    if is_plat("windows") then
+        add_defines("NOMINMAX", "UNICODE")
+        set_exceptions("cxx")
+        add_cxflags("/utf-8", "/W4", "/w44265", "/w44289", "/w44296", "/w45263", "/w44738", "/w45204")
+        add_cxflags(
+            "/EHs",
+            "-Wno-microsoft-cast",
+            "-Wno-invalid-offsetof",
+            "-Wno-c++2b-extensions",
+            "-Wno-microsoft-include",
+            "-Wno-overloaded-virtual",
+            "-Wno-ignored-qualifiers",
+            "-Wno-missing-field-initializers",
+            "-Wno-potentially-evaluated-expression",
+            "-Wno-pragma-system-header-outside-header",
+            {tools = {"clang_cl"}}
+        )
+    end
     add_files("src/**.cc")
     add_includedirs("src")
     add_packages("levilamina", "ll-bstats")
-    set_exceptions("none") -- To avoid conflicts with /EHa.
     set_kind("shared")
     set_languages("c++20")
     set_symbols("debug")
